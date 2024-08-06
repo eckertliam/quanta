@@ -11,7 +11,7 @@ import org.quanta.antlr.QuantaParser;
 
 
 public class Frontend {
-    ParseTree parse(String src) {
+    public ParseTree parse(String src) {
         CharStream input = CharStreams.fromString(src);
         Lexer lexer = new QuantaLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);

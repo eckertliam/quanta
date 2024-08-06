@@ -21,7 +21,14 @@ generic_type: SYMBOL '<' type (',' type)* '>';
 
 statement: (expr
            | assignment
-           | mut_assignment)
+           | mut_assignment
+           | begin_statement
+           | return_statement
+           | fn_declaration
+           | class_declaration
+           | impl_declaration
+           | trait_declaration
+           | type_declaration)
            (NEWLINE | EOF | ';')
            ;
 
@@ -29,7 +36,25 @@ assignment: SYMBOL (':'type )? '=' expr;
 
 mut_assignment: 'mut' assignment;
 
+begin_statement: 'begin' statement* 'end';
 
+return_statement: 'return' expr;
+
+generics: '<' type (',' type)* '>';
+
+fn_parameter: SYMBOL ':' type;
+
+fn_declaration: 'fn' SYMBOL generics? '(' fn_parameter (',' fn_parameter)* ')' '->' type 'begin' statement* 'end';
+
+class_member: SYMBOL ':' type;
+
+class_declaration: 'class' SYMBOL generics? 'begin' class_member* 'end';
+
+impl_declaration: 'impl' type ('for' type)? 'begin' fn_declaration* 'end';
+
+trait_declaration: 'trait' SYMBOL generics? 'begin' (class_member | fn_declaration)* 'end';
+
+type_declaration: 'type' SYMBOL generics? '=' type;
 
 // control structures
 
@@ -38,7 +63,19 @@ if_statement: 'if' expr 'then' statement*
                'end'
                ;
 
-match_case: (expr | '_') '->' statement*;
+atom_pattern: SYMBOL
+              | INT
+              | FLOAT
+              | BOOLEAN
+              | STRING
+              | '_'
+              ;
+
+match_pattern: atom_pattern
+              | atom_pattern ('|' match_pattern)*
+              ;
+
+match_case: match_pattern '->' statement*;
 
 match_statement: 'match' expr 'with' match_case+ 'end';
 
@@ -51,29 +88,32 @@ do_while_statement: 'do' statement* 'while' expr 'end';
 while_statement: 'while' expr 'do' statement* 'end';
 
 // expressions
-expr
-    : primary_expr (op=('*' | '/' | '%') expr)*
-    | primary_expr (op=('+' | '-') expr)*
-    | primary_expr (op=('==' | '!=' | '<' | '<=' | '>' | '>=') expr)*
-    | primary_expr (op=('and' | 'or') primary_expr)*
-    | op=('not' | '-') expr
-    | primary_expr postfix_op
-    ;
+expr: primary_expr (op=('*' | '/' | '%') expr)*
+      | primary_expr (op=('+' | '-') expr)*
+      | primary_expr (op=('==' | '!=' | '<' | '<=' | '>' | '>=') expr)*
+      | primary_expr (op=('and' | 'or') primary_expr)*
+      | op=('not' | '-') expr
+      | postfix_expr
+      | primary_expr
+      ;
 
-primary_expr
-    : '(' expr ')'
-    | fn_call
-    | array
-    | SYMBOL
-    | INT
-    | FLOAT
-    | BOOLEAN
-    | STRING
-    ;
+postfix_expr: field_access
+             | module_access
+             | fn_call
+             | array
+             ;
 
- postfix_op:
-    | '.' SYMBOL
-    | '::' SYMBOL;
+primary_expr: SYMBOL
+              | INT
+              | FLOAT
+              | BOOLEAN
+              | STRING
+              | '(' expr ')'
+              ;
+
+field_access: primary_expr '.' expr;
+
+module_access: primary_expr '::' SYMBOL;
 
 fn_call: SYMBOL '(' expr (',' expr)* ')';
 

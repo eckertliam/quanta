@@ -6,5 +6,6 @@ import org.quanta.frontend.Frontend;
 public class Main {
     public static void main(String[] args) {
         Frontend frontend = new Frontend();
+        ParseTree tree = frontend.parse("int main() { return 0; }");
     }
 }
