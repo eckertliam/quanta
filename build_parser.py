@@ -11,4 +11,4 @@ if os.path.exists(PARSER_DIR):
         if file != "__init__.py":
             os.remove(os.path.join(PARSER_DIR, file))
 
-call(["antlr4", "-Dlanguage=Python3", "-o", PARSER_DIR, "Quanta.g4"])
+call(["antlr4", "-Dlanguage=Python3", "-visitor", "-o", PARSER_DIR, "Quanta.g4"])
