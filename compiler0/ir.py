@@ -1,6 +1,7 @@
 from typing import List, Union, Optional, Dict
 # Contains an SSA IR for the compiler
 
+
 class IRVisitor:
     def visit(self, node):
         pass
@@ -11,25 +12,9 @@ class IRNode:
         visitor.visit(self)
 
 
-class Context(IRNode):
-    def __init__(self):
-        self.parent: Optional[Context] = None
-        self.types: Dict[str, Type] = []
-        self.functions: Dict[str, Function] = {}
-        self.current_function: Optional[Function] = None
-
-    def accept(self, visitor: IRVisitor):
-        visitor.visit(self)
-
-
 class Type(IRNode):
-    pass
-
     def accept(self, visitor: IRVisitor):
         visitor.visit(self)
-
-    def type_judge(self, constant: 'Constant'):
-        pass
 
 
 class IntType(Type):
@@ -53,8 +38,51 @@ class FloatType(Type):
 
 
 class BoolType(Type):
-    def __init__(self):
-        pass
+    def accept(self, visitor: IRVisitor):
+        visitor.visit(self)
+
+
+class StringType(Type):
+    def accept(self, visitor: IRVisitor):
+        visitor.visit(self)
+
+
+class CharType(Type):
+    def accept(self, visitor: IRVisitor):
+        visitor.visit(self)
+
+
+class ArrayType(Type):
+    def __init__(self, element_type: Type, size: int):
+        self.element_type: Type = element_type
+        self.size: int = size
+
+    def accept(self, visitor: IRVisitor):
+        visitor.visit(self)
+
+
+class PointerType(Type):
+    def __init__(self, pointer_type: Type):
+        self.pointer_type: Type = pointer_type
+
+    def accept(self, visitor: IRVisitor):
+        visitor.visit(self)
+
+
+class FunctionType(Type):
+    def __init__(self, return_type: Type, arguments: List[Type]):
+        self.return_type: Type = return_type
+        self.arguments: List[Type] = arguments
+
+    def accept(self, visitor: IRVisitor):
+        visitor.visit(self)
+
+
+class Variable(IRNode):
+    def __init__(self, ident: str, _type: Type, value: Optional['Const'] = None):
+        self.ident: str = ident
+        self.type: Type = _type
+        self.value: Optional[Const] = value
 
     def accept(self, visitor: IRVisitor):
         visitor.visit(self)
@@ -72,14 +100,38 @@ class Function(IRNode):
 
 
 class Instruction(IRNode):
-    pass
+    def accept(self, visitor: IRVisitor):
+        visitor.visit(self)
+
+
+class Const(IRNode):
+    def accept(self, visitor: IRVisitor):
+        visitor.visit(self)
+
+
+class IntConst(Const):
+    def __init__(self, value: int, size: int):
+        self.value: int = value
+        self.size: int = size
 
     def accept(self, visitor: IRVisitor):
         visitor.visit(self)
 
 
-class Constant(Instruction):
-    def type_judge(self, _type: Type):
-        _type.type_judge(self)
+class FloatConst(Const):
+    def __init__(self, value: float, size: int):
+        self.value: float = value
+        self.size: int = size
+
     def accept(self, visitor: IRVisitor):
         visitor.visit(self)
+
+
+class BoolConst(IntConst):
+    def __init__(self, value: bool):
+        super().__init__(1 if value else 0, 1)
+
+    def accept(self, visitor: IRVisitor):
+        visitor.visit(self)
+
+
