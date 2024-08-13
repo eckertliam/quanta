@@ -1,7 +1,3 @@
-//
-// Created by Liam Eckert on 8/12/24.
-//
-
 #include "../include/IR.h"
 
 #define QUANTA_IR_CPP
@@ -54,5 +50,45 @@ std::string Function::to_string() {
         result += TAB + label->to_string() + "\n";
     }
     result += "}\n";
+    return result;
+}
+
+std::string IntConstant::to_string() {
+    return std::to_string(value);
+}
+
+std::string BoolConstant::to_string() {
+    return value ? "true" : "false";
+}
+
+std::string FloatConstant::to_string() {
+    return std::to_string(value);
+}
+
+std::string StringConstant::to_string() {
+    return "\"" + value + "\"";
+}
+
+std::string ArrayConstant::to_string() {
+    std::string result = "[";
+    for (int i = 0; i < values.size(); i++) {
+        result += values[i]->to_string();
+        if (i != values.size() - 1) {
+            result += ", ";
+        }
+    }
+    result += "]";
+    return result;
+}
+
+std::string StructConstant::to_string() {
+    std::string result = "{";
+    for (int i = 0; i < values.size(); i++) {
+        result += values[i].first + ": " + values[i].second->to_string();
+        if (i != values.size() - 1) {
+            result += ", ";
+        }
+    }
+    result += "}";
     return result;
 }

@@ -99,9 +99,19 @@ public:
 
 class Module : public IRNode {
 public:
+    std::vector<StructDecl *> struct_decl;
     std::vector<Function *> functions;
 
-    explicit Module(std::vector<Function *> functions) : functions(std::move(functions)) {}
+    Module(std::vector<StructDecl *> struct_decl, std::vector<Function *> functions) : struct_decl(std::move(struct_decl)), functions(std::move(functions)) {}
+    Module() = default;
+
+    void push_struct_decl(StructDecl *struct_decl) {
+        struct_decl.push_back(struct_decl);
+    }
+
+    void push_function(Function *function) {
+        functions.push_back(function);
+    }
 
     std::string to_string() override;
 };
@@ -114,6 +124,13 @@ public:
     long value;
 
     explicit IntConstant(int value) : value(value) {}
+
+    std::string to_string() override;
+};
+
+class BoolConstant : public IntConstant {
+public:
+    explicit BoolConstant(bool value) : IntConstant(value) {}
 
     std::string to_string() override;
 };
@@ -141,6 +158,15 @@ public:
     std::vector<Constant *> values;
 
     explicit ArrayConstant(std::vector<Constant *> values) : values(std::move(values)) {}
+
+    std::string to_string() override;
+};
+
+class StructConstant : public Constant {
+public:
+    std::vector<std::pair<std::string, Constant *>> values;
+
+    explicit StructConstant(std::vector<std::pair<std::string, Constant *>> values) : values(std::move(values)) {}
 
     std::string to_string() override;
 };
