@@ -1,7 +1,9 @@
 #ifndef NEBULA_TOKEN_H
 #define NEBULA_TOKEN_H
 
-#include <string_view>
+#include <string>
+#include <utility>
+#include "span.h"
 
 enum class TokenType {
     L_PAREN,
@@ -34,25 +36,23 @@ enum class TokenType {
     FN,
     // Literals
     IDENTIFIER,
+    NUMBER,
     // Special
     EOF_,
     ERROR,
 };
 
+
+
 class Token {
 public:
     TokenType type;
-    std::string_view lexeme;
-    size_t line;
-    size_t  column;
+    std::string lexeme;
+    Span span;
 
-    Token(TokenType type, std::string_view lexeme, size_t line, size_t column)
-            : type(type), lexeme(lexeme), line(line), column(column) {};
+    Token(TokenType type, std::string lexeme, Span span) : type(type), lexeme(std::move(lexeme)), span(span) {}
 
-    Token(TokenType type, size_t line, size_t column)
-            : type(type), lexeme(), line(line), column(column) {};
-
-
+    [[nodiscard]] std::string to_string() const;
 };
 
 
