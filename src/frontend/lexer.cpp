@@ -86,6 +86,9 @@ void Lexer::skip_comment() {
 static std::map<std::string , TokenType> keywords = {
         {"type", TokenType::TYPE},
         {"fn", TokenType::FN},
+        {"Fn", TokenType::FN_TYPE},
+        {"record", TokenType::RECORD},
+        {"enum", TokenType::ENUM}
 };
 
 Token Lexer::lex_identifier() {
@@ -162,6 +165,10 @@ Token Lexer::next_token() {
             return simple_token(TokenType::PIPE);
         case '^':
             return simple_token(TokenType::CARET);
+        case ':':
+            return simple_token(TokenType::COLON);
+        case ';':
+            return simple_token(TokenType::SEMICOLON);
         case '#':
             skip_comment();
             return next_token();

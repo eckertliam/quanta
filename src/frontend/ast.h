@@ -1,7 +1,3 @@
-//
-// Created by Liam Eckert on 8/16/24.
-//
-
 #ifndef QUANTA_AST_H
 #define QUANTA_AST_H
 
@@ -35,25 +31,25 @@ class Expr : public AstNode {};
 /// unit class for a literal expression
 class LiteralExpr : public Expr {};
 
-/// a record type declaration, a product type with named fields e.g 'type Point = {x: i32, y: i32}'
+/// a record type declaration, a product type with named fields e.g 'record Point {x: i32, y: i32}'
 class RecordDecl : public TypeDecl {
 public:
     std::string name;
     std::vector<std::pair<std::string , std::unique_ptr<TypeExpr>>> fields;
     Span span;
 
-    RecordDecl(std::string name, std::vector<std::pair<std::string, TypeExpr>> fields, Span span)
+    RecordDecl(std::string name, std::vector<std::pair<std::string, std::unique_ptr<TypeExpr>>> fields, Span span)
             : name(std::move(name)), fields(std::move(fields)), span(span) {}
 };
 
-/// a discriminated sum type declaration e.g 'type Expr = Int i32 | Float f64'
-class DiscSumDecl : public TypeDecl {
+/// a discriminated sum type declaration e.g 'enum Expr { Int: i32, Float: f64,}' or 'enum Option { Some: a, None }'
+class EnumDecl : public TypeDecl {
 public:
     std::string name;
     std::vector<std::pair<std::string , std::unique_ptr<TypeExpr>>> variants;
     Span span;
 
-    DiscSumDecl(std::string name, std::vector<std::pair<std::string, std::unique_ptr<TypeExpr>>> variants, Span span)
+    EnumDecl(std::string name, std::vector<std::pair<std::string, std::unique_ptr<TypeExpr>>> variants, Span span)
             : name(std::move(name)), variants(std::move(variants)), span(span) {}
 };
 
@@ -61,11 +57,11 @@ public:
 class TypeAliasDecl : public TypeDecl {
 public:
     std::string name;
-    std::unique_ptr<TypeExpr> alias;
+    std::unique_ptr<TypeExpr> type;
     Span span;
 
-    TypeAliasDecl(std::string name, std::unique_ptr<TypeExpr> alias, Span span)
-            : name(std::move(name)), alias(std::move(alias)), span(span) {}
+    TypeAliasDecl(std::string name, std::unique_ptr<TypeExpr> type, Span span)
+            : name(std::move(name)), type(std::move(type)), span(span) {}
 };
 
 /// a literal type expression (e.g. i32, f64, bool, or user defined type)
@@ -79,12 +75,12 @@ public:
 };
 
 /// a positional product type expression e.g. (i32, f64) or (i32, f64, bool) etc
-class PosProdTypeExpr : public TypeExpr {
+class TupleTypeExpr : public TypeExpr {
 public:
     std::vector<std::unique_ptr<TypeExpr>> fields;
     Span span;
 
-    PosProdTypeExpr(std::vector<std::unique_ptr<TypeExpr>> fields, Span span)
+    TupleTypeExpr(std::vector<std::unique_ptr<TypeExpr>> fields, Span span)
             : fields(std::move(fields)), span(span) {}
 };
 

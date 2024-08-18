@@ -52,10 +52,18 @@ std::string tok_ty_to_string(TokenType type) {
             return "CARET";
         case TokenType::ARROW:
             return "ARROW";
+        case TokenType::COLON:
+            return "COLON";
+        case TokenType::SEMICOLON:
+            return "SEMICOLON";
         case TokenType::TYPE:
             return "TYPE";
         case TokenType::FN:
             return "FN";
+        case TokenType::RECORD:
+            return "RECORD";
+        case TokenType::ENUM:
+            return "ENUM";
         case TokenType::IDENTIFIER:
             return "IDENTIFIER";
         case TokenType::NUMBER:

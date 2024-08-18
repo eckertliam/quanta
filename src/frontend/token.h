@@ -31,9 +31,16 @@ enum class TokenType {
     PIPE,
     CARET,
     ARROW,
+    COLON,
+    SEMICOLON,
     // Keywords
     TYPE,
+    RECORD,
+    ENUM,
+    // Fn keyword for function declarations
     FN,
+    // Fn for Fn(i32) -> i32 type sigs
+    FN_TYPE,
     // Literals
     IDENTIFIER,
     NUMBER,
