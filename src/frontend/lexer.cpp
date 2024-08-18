@@ -83,24 +83,33 @@ void Lexer::skip_comment() {
     consume();
 }
 
-static std::map<std::string , TokenType> keywords = {
-        {"type", TokenType::TYPE},
-        {"fn", TokenType::FN},
-        {"Fn", TokenType::FN_TYPE},
-        {"record", TokenType::RECORD},
-        {"enum", TokenType::ENUM}
-};
+TokenType get_keyword(const std::string& lexeme) {
+    if (lexeme == "record") {
+        return TokenType::RECORD;
+    } else if (lexeme == "enum") {
+        return TokenType::ENUM;
+    } else if (lexeme == "Fn") {
+        return TokenType::FN_TYPE;
+    } else if (lexeme == "type") {
+        return TokenType::TYPE;
+    } else if (lexeme == "fn") {
+        return TokenType::FN;
+    } else {
+        return TokenType::IDENTIFIER;
+    }
+}
 
 Token Lexer::lex_identifier() {
     while (std::isalnum(peek()) || peek() == '_') {
         consume();
     }
-    TokenType type = TokenType::IDENTIFIER;
     std::string lexeme = get_lexeme();
-    if (keywords.contains(lexeme)) {
-        type = keywords[lexeme];
+    TokenType type = get_keyword(lexeme);
+    if (type == TokenType::IDENTIFIER) {
+        return {type, lexeme, get_span(start_loc)};
+    } else {
+        return {type, "", get_span(start_loc)};
     }
-    return {type, lexeme, get_span(start_loc)};
 }
 
 Token Lexer::lex_number() {

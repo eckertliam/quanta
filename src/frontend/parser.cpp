@@ -302,15 +302,18 @@ std::unique_ptr<NumberExpr> Parser::parse_number() {
 Program Parser::parse_program() {
     while (current.type != TokenType::EOF_) {
         switch (current.type) {
-            case TokenType::RECORD:
-                program.push_back(parse_record_decl());
-                break;
-            case TokenType::ENUM:
-                program.push_back(parse_enum_decl());
-                break;
-            case TokenType::TYPE:
-                program.push_back(parse_type_alias_decl());
-                break;
+            case TokenType::RECORD: {
+                auto record_decl = parse_record_decl();
+                program.push_back(std::move(record_decl));
+            }
+            case TokenType::ENUM: {
+                auto enum_decl = parse_enum_decl();
+                program.push_back(std::move(enum_decl));
+            }
+            case TokenType::TYPE: {
+                auto type_alias_decl = parse_type_alias_decl();
+                program.push_back(std::move(type_alias_decl));
+            }
             default:
                 errors.push_back("Unexpected token " + current.to_string() + " at " + current.span.to_string());
                 break;

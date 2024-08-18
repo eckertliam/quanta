@@ -1,10 +1,6 @@
 #ifndef QUANTA_LEXER_H
 #define QUANTA_LEXER_H
 
-
-#include <string>
-#include <string_view>
-#include <map>
 #include "span.h"
 #include "token.h"
 

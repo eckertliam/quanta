@@ -60,6 +60,8 @@ std::string tok_ty_to_string(TokenType type) {
             return "TYPE";
         case TokenType::FN:
             return "FN";
+        case TokenType::FN_TYPE:
+            return "FN_TYPE";
         case TokenType::RECORD:
             return "RECORD";
         case TokenType::ENUM:
