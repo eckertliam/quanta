@@ -59,6 +59,9 @@ public:
 
     Token(TokenType type, std::string lexeme, Span span) : type(type), lexeme(std::move(lexeme)), span(span) {}
 
+    // default constructor
+    Token() = default;
+
     [[nodiscard]] std::string to_string() const;
 };
 

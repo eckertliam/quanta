@@ -19,8 +19,8 @@ bool Parser::expect_or_error(TokenType type, const std::string& message) {
         consume();
         return true;
     }
-    errors.push_back(message);
-    return false;
+    std::cerr << message << std::endl;
+    exit(1);
 }
 
 std::unique_ptr<Expr> Parser::parse_expr() {
@@ -28,35 +28,28 @@ std::unique_ptr<Expr> Parser::parse_expr() {
         case TokenType::NUMBER:
             return parse_number();
         default:
-            errors.push_back("Expected an expression at " + current.span.to_string() + " got " + current.to_string());
+            std::cerr << "Expected an expression at " << current.span.to_string() << " got " << current.to_string() << std::endl;
+            exit(1);
             return {};
     }
 }
 
 
 std::unique_ptr<RecordDecl> Parser::parse_record_decl() {
-    // previous token is RECORD
-    Loc start = prev.span.start;
+    // current token is RECORD
+    Loc start = consume().span.start;
     // expect current token to be an identifier
-    if (!expect_or_error(TokenType::IDENTIFIER, "Expected an identifier for record name at " + current.span.to_string() + " got " + current.to_string())) {
-        return {};
-    }
+    expect_or_error(TokenType::IDENTIFIER, "Expected an identifier for record name at " + current.span.to_string() + " got " + current.to_string());
     std::string name = prev.lexeme;
     // expect current token to be L_BRACE
-    if (!expect_or_error(TokenType::L_BRACE, "Expected '{' after record name at " + current.span.to_string() + " got " + current.to_string())) {
-        return {};
-    }
+    expect_or_error(TokenType::L_BRACE, "Expected '{' after record name at " + current.span.to_string() + " got " + current.to_string());
     std::vector<std::pair<std::string, std::unique_ptr<TypeExpr>>> fields;
     while (current.type != TokenType::R_BRACE && current.type != TokenType::EOF_) {
         // expect current token to be an ident
-        if (!expect_or_error(TokenType::IDENTIFIER, "Expected an identifier for field name at " + current.span.to_string() + " got " + current.to_string())) {
-            return {};
-        }
+        expect_or_error(TokenType::IDENTIFIER, "Expected an identifier for field name at " + current.span.to_string() + " got " + current.to_string());
         std::string field_name = prev.lexeme;
         // expect current token to be a colon
-        if (!expect_or_error(TokenType::COLON, "Expected ':' after field name at " + current.span.to_string() + " got " + current.to_string())) {
-            return {};
-        }
+        expect_or_error(TokenType::COLON, "Expected ':' after field name at " + current.span.to_string() + " got " + current.to_string());
         // parse the type expression
         std::unique_ptr<TypeExpr> type = parse_type_expr();
         // check for an error from parsing the type expression
@@ -68,9 +61,7 @@ std::unique_ptr<RecordDecl> Parser::parse_record_decl() {
         expect(TokenType::COMMA);
     }
     // expect current token to be R_BRACE
-    if (!expect_or_error(TokenType::R_BRACE, "Expected '}' after record fields at " + current.span.to_string() + " got " + current.to_string())) {
-        return {};
-    }
+    expect_or_error(TokenType::R_BRACE, "Expected '}' after record fields at " + current.span.to_string() + " got " + current.to_string());
     // if there is a semicolon consume it
     expect(TokenType::SEMICOLON);
     return std::make_unique<RecordDecl>(name, std::move(fields), Span{start, prev.span.end});
@@ -80,21 +71,15 @@ std::unique_ptr<EnumDecl> Parser::parse_enum_decl() {
     // previous token is ENUM
     Loc start = prev.span.start;
     // expect current token to be an identifier
-    if (!expect_or_error(TokenType::IDENTIFIER, "Expected an identifier for enum name at " + current.span.to_string() + " got " + current.to_string())) {
-        return {};
-    }
+    expect_or_error(TokenType::IDENTIFIER, "Expected an identifier for enum name at " + current.span.to_string() + " got " + current.to_string());
     std::string name = prev.lexeme;
     // expect current token to be L_BRACE
-    if (!expect_or_error(TokenType::L_BRACE, "Expected '{' after enum name at " + current.span.to_string() + " got " + current.to_string())) {
-        return {};
-    }
+    expect_or_error(TokenType::L_BRACE, "Expected '{' after enum name at " + current.span.to_string() + " got " + current.to_string());
     std::vector<std::pair<std::string, std::unique_ptr<TypeExpr>>> variants;
     // variants follow the pattern IDENT COLON type_expr? (COMMA IDENT COLON type_expr?)*
     while (current.type != TokenType::R_BRACE && current.type != TokenType::EOF_) {
         // expect current token to be an ident
-        if (!expect_or_error(TokenType::IDENTIFIER, "Expected an identifier for variant name at " + current.span.to_string() + " got " + current.to_string())) {
-            return {};
-        }
+        expect_or_error(TokenType::IDENTIFIER, "Expected an identifier for variant name at " + current.span.to_string() + " got " + current.to_string());
         std::string variant_name = prev.lexeme;
         // expect current token to be a colon if variant has a type expression
         // otherwise expect a colon or a right brace
@@ -113,9 +98,7 @@ std::unique_ptr<EnumDecl> Parser::parse_enum_decl() {
         expect(TokenType::COMMA);
     }
     // expect current token to be R_BRACE
-    if (!expect_or_error(TokenType::R_BRACE, "Expected '}' after enum variants at " + current.span.to_string() + " got " + current.to_string())) {
-        return {};
-    }
+    expect_or_error(TokenType::R_BRACE, "Expected '}' after enum variants at " + current.span.to_string() + " got " + current.to_string());
     // if there is a semicolon consume it
     expect(TokenType::SEMICOLON);
     return std::make_unique<EnumDecl>(name, std::move(variants), Span{start, prev.span.end});
@@ -125,14 +108,10 @@ std::unique_ptr<TypeAliasDecl> Parser::parse_type_alias_decl() {
     // current token is TYPE
     Loc start = consume().span.start;
     // expect current token to be an identifier
-    if (!expect_or_error(TokenType::IDENTIFIER, "Expected an identifier for type alias name at " + current.span.to_string() + " got " + current.to_string())) {
-        return {};
-    }
+    expect_or_error(TokenType::IDENTIFIER, "Expected an identifier for type alias name at " + current.span.to_string() + " got " + current.to_string());
     std::string name = prev.lexeme;
     // expect current token to be ASSIGN
-    if (!expect_or_error(TokenType::ASSIGN, "Expected '=' after type alias name at " + current.span.to_string() + " got " + current.to_string())) {
-        return {};
-    }
+    expect_or_error(TokenType::ASSIGN, "Expected '=' after type alias name at " + current.span.to_string() + " got " + current.to_string());
     // parse the type expression
     std::unique_ptr<TypeExpr> type = parse_type_expr();
     // check for an error from parsing the type expression
@@ -140,9 +119,7 @@ std::unique_ptr<TypeAliasDecl> Parser::parse_type_alias_decl() {
         return {};
     }
     // expect current token to be SEMICOLON
-    if (!expect_or_error(TokenType::SEMICOLON, "Expected ';' after type alias at " + current.span.to_string() + " got " + current.to_string())) {
-        return {};
-    }
+    expect_or_error(TokenType::SEMICOLON, "Expected ';' after type alias at " + current.span.to_string() + " got " + current.to_string());
     return std::make_unique<TypeAliasDecl>(name, std::move(type), Span{start, prev.span.end});
 }
 
@@ -161,7 +138,8 @@ std::unique_ptr<TypeExpr> Parser::parse_type_expr() {
         case TokenType::FN_TYPE:
             return parse_function_type();
         default:
-            errors.push_back("Expected a type expression at " + current.span.to_string() + " got " + current.to_string());
+            std::cerr << "Expected a type expression at " << current.span.to_string() << " got " << current.to_string() << std::endl;
+            exit(1);
             return {};
     }
 }
@@ -194,9 +172,7 @@ std::unique_ptr<TupleTypeExpr> Parser::parse_tuple_type() {
         }
     }
     // expect current token to be R_PAREN
-    if (!expect_or_error(TokenType::R_PAREN, "Expected ')' after tuple fields at " + current.span.to_string() + " got " + current.to_string())) {
-        return {};
-    }
+    expect_or_error(TokenType::R_PAREN, "Expected ')' after tuple type at " + current.span.to_string() + " got " + current.to_string());
     return std::make_unique<TupleTypeExpr>(std::move(fields), Span{start, prev.span.end});
 }
 
@@ -237,9 +213,7 @@ std::unique_ptr<ArrayTypeExpr> Parser::parse_array_type() {
         return {};
     }
     // expect current token to be R_BRACKET
-    if (!expect_or_error(TokenType::R_BRACKET, "Expected ']' after array type at " + current.span.to_string() + " got " + current.to_string())) {
-        return {};
-    }
+    expect_or_error(TokenType::R_BRACKET, "Expected ']' after array type at " + current.span.to_string() + " got " + current.to_string());
     return std::make_unique<ArrayTypeExpr>(std::move(elem), std::move(size), Span{start, prev.span.end});
 }
 
@@ -247,9 +221,7 @@ std::unique_ptr<FuncTypeExpr> Parser::parse_function_type() {
     // current token is FN_TYPE
     Loc start = consume().span.start;
     // expect current token to be L_PAREN
-    if (!expect_or_error(TokenType::L_PAREN, "Expected '(' for function type at " + current.span.to_string() + " got " + current.to_string())) {
-        return {};
-    }
+    expect_or_error(TokenType::L_PAREN, "Expected '(' after 'fn' at " + current.span.to_string() + " got " + current.to_string());
     std::vector<std::unique_ptr<TypeExpr>> params;
     while (current.type != TokenType::R_PAREN && current.type != TokenType::EOF_) {
         // parse the type expression
@@ -265,13 +237,9 @@ std::unique_ptr<FuncTypeExpr> Parser::parse_function_type() {
         }
     }
     // expect current token to be R_PAREN
-    if (!expect_or_error(TokenType::R_PAREN, "Expected ')' after function parameters at " + current.span.to_string() + " got " + current.to_string())) {
-        return {};
-    }
+    expect_or_error(TokenType::R_PAREN, "Expected ')' after function parameters at " + current.span.to_string() + " got " + current.to_string());
     // expect current token to be ARROW
-    if (!expect_or_error(TokenType::ARROW, "Expected '->' after function parameters at " + current.span.to_string() + " got " + current.to_string())) {
-        return {};
-    }
+    expect_or_error(TokenType::ARROW, "Expected '->' after function parameters at " + current.span.to_string() + " got " + current.to_string());
     // parse the return type
     std::unique_ptr<TypeExpr> ret = parse_type_expr();
     // check for an error from parsing the return type
@@ -301,21 +269,27 @@ std::unique_ptr<NumberExpr> Parser::parse_number() {
 
 Program Parser::parse_program() {
     while (current.type != TokenType::EOF_) {
+        // print the current token
+        std::cout << current.to_string() << std::endl;
         switch (current.type) {
             case TokenType::RECORD: {
                 auto record_decl = parse_record_decl();
                 program.push_back(std::move(record_decl));
+                break;
             }
             case TokenType::ENUM: {
                 auto enum_decl = parse_enum_decl();
                 program.push_back(std::move(enum_decl));
+                break;
             }
             case TokenType::TYPE: {
                 auto type_alias_decl = parse_type_alias_decl();
                 program.push_back(std::move(type_alias_decl));
+                break;
             }
             default:
-                errors.push_back("Unexpected token " + current.to_string() + " at " + current.span.to_string());
+                std::cerr << "Unknown token at " << current.span.to_string() << " with token " << current.to_string() << std::endl;
+                exit(1);
                 break;
         }
     }

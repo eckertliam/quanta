@@ -1,6 +1,9 @@
 #ifndef QUANTA_PARSER_H
 #define QUANTA_PARSER_H
 
+#include <iostream>
+#include <utility>
+
 #include "lexer.h"
 #include "ast.h"
 
@@ -10,7 +13,6 @@ private:
     Token prev;
     Token current;
     Program program;
-    std::vector<std::string> errors;
 
     /// consume the current token
     Token consume();
@@ -41,8 +43,8 @@ private:
     /// Parse a number expression
     std::unique_ptr<NumberExpr> parse_number();
 public:
-    explicit Parser(Lexer lexer)
-            : lexer(std::move(lexer)), prev(lexer.next_token()), current(lexer.next_token()) {}
+    explicit Parser(std::string src)
+            : lexer(Lexer(std::move(src))), prev(Token()), current(lexer.next_token()) {}
 
     /// Parse a program
     Program parse_program();
