@@ -104,8 +104,12 @@ public:
     EnumDecl(const EnumDecl& other) : name(other.name), variants(), span(other.span) {
         for (const auto& variant : other.variants) {
             auto first = variant.first;
-            auto second = std::unique_ptr<TypeExpr>(variant.second->clone());
-            variants.emplace_back(first, std::move(second));
+            if (variant.second) {
+                auto second = std::unique_ptr<TypeExpr>(variant.second->clone());
+                variants.emplace_back(first, std::move(second));
+            } else {
+                variants.emplace_back(first, nullptr);
+            }
         }
     }
 
@@ -216,9 +220,7 @@ public:
             : elem(std::move(elem)), size(std::move(size)), span(span) {};
 
     /// Copy constructor
-    ArrayTypeExpr(const ArrayTypeExpr& other) : elem(other.elem->clone()), span(other.span) {
-        auto size_clone = std::unique_ptr<Expr>(other.size->clone());
-    }
+    ArrayTypeExpr(const ArrayTypeExpr& other) : elem(other.elem->clone()), size(other.size->clone()), span(other.span) {};
 
     /// Clone the array type expression
     [[nodiscard]] ArrayTypeExpr* clone() const override {

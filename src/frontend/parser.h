@@ -6,17 +6,19 @@
 
 #include "lexer.h"
 #include "ast.h"
+#include "token_stream.h"
 
 class Parser {
 private:
-    Lexer lexer;
-    Token prev;
+    TokenStream token_stream;
     Token current;
     Program program;
 
-    /// consume the current token
+    /// Throw an error
+    static void error(const std::string& message) ;
+    /// return the current token then advance
     Token consume();
-    /// expect the current token to be of a certain type
+    /// Expect a token
     bool expect(TokenType type);
     /// expect or error
     bool expect_or_error(TokenType type, const std::string& message);
@@ -30,6 +32,8 @@ private:
     std::unique_ptr<TypeAliasDecl> parse_type_alias_decl();
     /// Parse a type expression
     std::unique_ptr<TypeExpr> parse_type_expr();
+    /// Parse a simple type expression
+    std::unique_ptr<TypeExpr> parse_simple_type();
     /// Parse a symbol type expression
     std::unique_ptr<SymbolTypeExpr> parse_symbol_type();
     /// Parse a Tuple type expression
@@ -44,7 +48,7 @@ private:
     std::unique_ptr<NumberExpr> parse_number();
 public:
     explicit Parser(std::string src)
-            : lexer(Lexer(std::move(src))), prev(Token()), current(lexer.next_token()) {}
+            : token_stream(Lexer(std::move(src))), current(token_stream.consume()) {};
 
     /// Parse a program
     Program parse_program();

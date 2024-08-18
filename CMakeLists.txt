@@ -15,13 +15,17 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 
 set(SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 
 file(GLOB_RECURSE FRONTEND_SOURCES ${SOURCE_DIR}/frontend/*.cpp ${SOURCE_DIR}/frontend/*.h)
 add_library(frontend_lib OBJECT ${FRONTEND_SOURCES})
 
 add_executable(quanta ${SOURCE_DIR}/main.cpp $<TARGET_OBJECTS:frontend_lib>)
 
-add_executable(quanta_tests ${CMAKE_CURRENT_SOURCE_DIR}/tests/main.cpp $<TARGET_OBJECTS:frontend_lib>)
+add_executable(quanta_tests ${TEST_DIR}/lexer_tests.cpp
+        ${TEST_DIR}/parser_tests.cpp
+        $<TARGET_OBJECTS:frontend_lib>
+        tests/parser_tests.cpp)
 target_link_libraries(quanta_tests GTest::gtest_main)
 
 include(GoogleTest)
