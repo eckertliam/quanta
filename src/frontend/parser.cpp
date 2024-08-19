@@ -25,6 +25,7 @@ bool Parser::expect_or_error(TokenType type, const std::string& message) {
         return true;
     }
     error(message);
+    return false;
 }
 
 std::unique_ptr<Expr> Parser::parse_expr() {
@@ -33,6 +34,7 @@ std::unique_ptr<Expr> Parser::parse_expr() {
             return parse_number();
         default:
             error("Expected an expression instead got " + current.to_string());
+            return nullptr;
     }
 }
 
@@ -47,6 +49,11 @@ std::unique_ptr<RecordDecl> Parser::parse_record_decl() {
         error("Expected an identifier for record name instead got " + record_ident.to_string());
     }
     std::string name = record_ident.lexeme;
+    // check for generic parameters
+    std::vector<std::unique_ptr<SymbolTypeExpr>> generic_params;
+    if (expect(TokenType::LT)) {
+        generic_params = parse_generic_params();
+    }
     // expect current token to be L_BRACE
     expect_or_error(TokenType::L_BRACE, "Expected '{' after record name instead got " + current.to_string());
     std::vector<std::pair<std::string, std::unique_ptr<TypeExpr>>> fields;
@@ -71,7 +78,7 @@ std::unique_ptr<RecordDecl> Parser::parse_record_decl() {
     expect_or_error(TokenType::R_BRACE, "Expected '}' instead got " + current.to_string());
     // if there is a semicolon consume it these are optional
     expect(TokenType::SEMICOLON);
-    return std::make_unique<RecordDecl>(name, std::move(fields), Span{start, token_stream.peek_back().span.end});
+    return std::make_unique<RecordDecl>(name, std::move(generic_params), std::move(fields), Span{start, token_stream.peek_back().span.end});
 }
 
 std::unique_ptr<EnumDecl> Parser::parse_enum_decl() {
@@ -83,6 +90,11 @@ std::unique_ptr<EnumDecl> Parser::parse_enum_decl() {
         error("Expected an identifier for enum name instead got " + ident.to_string());
     }
     std::string name = ident.lexeme;
+    // check for generic parameters
+    std::vector<std::unique_ptr<SymbolTypeExpr>> generic_params;
+    if (expect(TokenType::LT)) {
+        generic_params = parse_generic_params();
+    }
     // expect current token to be L_BRACE
     expect_or_error(TokenType::L_BRACE, "Expected '{' after enum name instead got " + current.to_string());
     std::vector<std::pair<std::string, std::unique_ptr<TypeExpr>>> variants;
@@ -112,7 +124,7 @@ std::unique_ptr<EnumDecl> Parser::parse_enum_decl() {
     expect_or_error(TokenType::R_BRACE, "Expected '}' after enum variants instead got " + current.to_string());
     // if there is a semicolon consume it
     expect(TokenType::SEMICOLON);
-    return std::make_unique<EnumDecl>(name, std::move(variants), Span{start, token_stream.peek_back().span.end});
+    return std::make_unique<EnumDecl>(name, std::move(generic_params), std::move(variants), Span{start, token_stream.peek_back().span.end});
 }
 
 std::unique_ptr<TypeAliasDecl> Parser::parse_type_alias_decl() {
@@ -124,6 +136,11 @@ std::unique_ptr<TypeAliasDecl> Parser::parse_type_alias_decl() {
         error("Expected an identifier for type alias name instead got " + ident.to_string());
     }
     std::string name = ident.lexeme;
+    // check for generic parameters
+    std::vector<std::unique_ptr<SymbolTypeExpr>> generic_params;
+    if (expect(TokenType::LT)) {
+        generic_params = parse_generic_params();
+    }
     // expect current token to be ASSIGN
     expect_or_error(TokenType::ASSIGN, "Expected '=' after type alias name instead got " + current.to_string());
     std::cout << current.to_string() << std::endl;
@@ -131,7 +148,7 @@ std::unique_ptr<TypeAliasDecl> Parser::parse_type_alias_decl() {
     std::unique_ptr<TypeExpr> type = parse_type_expr();
     // expect current token to be SEMICOLON
     expect_or_error(TokenType::SEMICOLON, "Expected ';' after type alias declaration instead got " + current.to_string());
-    return std::make_unique<TypeAliasDecl>(name, std::move(type), Span{start, token_stream.peek_back().span.end});
+    return std::make_unique<TypeAliasDecl>(name, std::move(generic_params), std::move(type), Span{start, token_stream.peek_back().span.end});
 }
 
 std::unique_ptr<TypeExpr> Parser::parse_type_expr() {
@@ -145,17 +162,15 @@ std::unique_ptr<TypeExpr> Parser::parse_type_expr() {
                 return parse_symbol_type();
             }
         }
-        case TokenType::L_PAREN:
-            return parse_tuple_type();
         case TokenType::L_BRACKET:
-            return parse_array_type();
+            return parse_bracketed_type();
+        case TokenType::L_PAREN:
+            return parse_paren_type();
         case TokenType::PIPE:
             return parse_sum_type();
-        case TokenType::FN_TYPE:
-            return parse_function_type();
         default:
             error("Expected a type expression instead got " + current.to_string());
-            break;
+            return nullptr;
     }
 }
 
@@ -164,15 +179,59 @@ std::unique_ptr<TypeExpr> Parser::parse_simple_type() {
         case TokenType::IDENTIFIER:
             return parse_symbol_type();
         case TokenType::L_PAREN:
-            return parse_tuple_type();
+            return parse_paren_type();
         case TokenType::L_BRACKET:
-            return parse_array_type();
-        case TokenType::FN_TYPE:
-            return parse_function_type();
+            return parse_bracketed_type();
         default:
             error("Expected a simple type expression instead got " + current.to_string());
-            break;
+            return nullptr;
     }
+}
+
+std::unique_ptr<TypeExpr> Parser::parse_bracketed_type() {
+    // current token is L_BRACKET
+    Loc start = consume().span.start;
+    // here there is ambiguity between tuple and array types
+    // we parse the type expression, if the token after is a comma then it is a tuple if it is a semicolon then it is an array
+    std::unique_ptr<TypeExpr> type = parse_type_expr();
+    if (expect(TokenType::COMMA)) {
+        // it is a tuple type
+        // now we parse the type list
+        std::vector<std::unique_ptr<TypeExpr>> fields;
+        fields.push_back(std::move(type));
+        while (current.type != TokenType::R_BRACKET && current.type != TokenType::EOF_) {
+            // parse the type expression
+            std::unique_ptr<TypeExpr> field = parse_type_expr();
+            fields.push_back(std::move(field));
+            // if there is a comma consume it otherwise break
+            if (!expect(TokenType::COMMA)) {
+                break;
+            }
+        }
+        // expect current token to be R_BRACKET
+        expect_or_error(TokenType::R_BRACKET, "Expected ']' after tuple type instead got " + current.to_string());
+        return std::make_unique<TupleTypeExpr>(std::move(fields), Span{start, token_stream.peek_back().span.end});
+    } else if (expect(TokenType::SEMICOLON)) {
+        // it is an array type
+        // parse the size expression
+        std::unique_ptr<Expr> size = parse_expr();
+        // expect current token to be R_BRACKET
+        expect_or_error(TokenType::R_BRACKET, "Expected ']' after array type instead got " + current.to_string());
+        return std::make_unique<ArrayTypeExpr>(std::move(type), std::move(size), Span{start, token_stream.peek_back().span.end});
+    } else {
+        error("Expected ',' or ';' after type expression instead got " + current.to_string());
+        return nullptr;
+    }
+}
+
+std::unique_ptr<TypeExpr> Parser::parse_paren_type() {
+    // current token is L_PAREN
+    Loc start = consume().span.start;
+    // parse the type expression
+    std::unique_ptr<TypeExpr> type = parse_type_expr();
+    // expect current token to be R_PAREN
+    expect_or_error(TokenType::R_PAREN, "Expected ')' after parenthesized type expression instead got " + current.to_string());
+    return type;
 }
 
 std::unique_ptr<SymbolTypeExpr> Parser::parse_symbol_type() {
@@ -180,29 +239,44 @@ std::unique_ptr<SymbolTypeExpr> Parser::parse_symbol_type() {
     Loc start = current.span.start;
     std::string symbol = current.lexeme;
     consume();
-    return std::make_unique<SymbolTypeExpr>(symbol, Span{start, token_stream.peek_back().span.end});
+    // check for generic arguments
+    std::vector<std::unique_ptr<TypeExpr>> generic_args;
+    if (expect(TokenType::LT)) {
+        generic_args = parse_generic_args();
+    }
+    return std::make_unique<SymbolTypeExpr>(symbol, std::move(generic_args), Span{start, token_stream.peek_back().span.end});
 }
 
-std::unique_ptr<TupleTypeExpr> Parser::parse_tuple_type() {
-    // current token is L_PAREN
-    Loc start = consume().span.start;
-    std::vector<std::unique_ptr<TypeExpr>> fields;
-    while (current.type != TokenType::R_PAREN && current.type != TokenType::EOF_) {
-        // parse the type expression
-        std::unique_ptr<TypeExpr> type = parse_type_expr();
-        // check for an error from parsing the type expression
-        if (!type) {
-            return {};
-        }
-        fields.push_back(std::move(type));
+std::vector<std::unique_ptr<SymbolTypeExpr>> Parser::parse_generic_params() {
+    std::vector<std::unique_ptr<SymbolTypeExpr>> generic_params;
+    while (current.type != TokenType::GT && current.type != TokenType::EOF_) {
+        // parse the symbol type
+        auto symbol_type = parse_symbol_type();
+        generic_params.push_back(std::move(symbol_type));
         // if there is a comma consume it otherwise break
         if (!expect(TokenType::COMMA)) {
             break;
         }
     }
-    // expect current token to be R_PAREN
-    expect_or_error(TokenType::R_PAREN, "Expected ')' after tuple type instead got " + current.to_string());
-    return std::make_unique<TupleTypeExpr>(std::move(fields), Span{start, token_stream.peek_back().span.end});
+    // expect current token to be GT
+    expect_or_error(TokenType::GT, "Expected '>' after generic parameters instead got " + current.to_string());
+    return generic_params;
+}
+
+std::vector<std::unique_ptr<TypeExpr>> Parser::parse_generic_args() {
+    std::vector<std::unique_ptr<TypeExpr>> generic_args;
+    while (current.type != TokenType::GT && current.type != TokenType::EOF_) {
+        // parse the type expression
+        auto type = parse_type_expr();
+        generic_args.push_back(std::move(type));
+        // if there is a comma consume it otherwise break
+        if (!expect(TokenType::COMMA)) {
+            break;
+        }
+    }
+    // expect current token to be GT
+    expect_or_error(TokenType::GT, "Expected '>' after generic arguments instead got " + current.to_string());
+    return generic_args;
 }
 
 std::unique_ptr<SumTypeExpr> Parser::parse_sum_type() {
@@ -221,45 +295,6 @@ std::unique_ptr<SumTypeExpr> Parser::parse_sum_type() {
         }
     }
     return std::make_unique<SumTypeExpr>(std::move(variants), Span{start, token_stream.peek_back().span.end});
-}
-
-std::unique_ptr<ArrayTypeExpr> Parser::parse_array_type() {
-    // current token is L_BRACKET
-    // get loc and consume the left bracket
-    Loc start = consume().span.start;
-    // parse the element type
-    std::unique_ptr<TypeExpr> elem = parse_simple_type();
-    // expect current token to be a semicolon
-    expect_or_error(TokenType::SEMICOLON, "Expected ';' after array element type instead got " + current.to_string());
-    // parse the size expression
-    std::unique_ptr<Expr> size = parse_expr();
-    // expect current token to be R_BRACKET
-    expect_or_error(TokenType::R_BRACKET, "Expected ']' after array type instead got " + current.to_string());
-    return std::make_unique<ArrayTypeExpr>(std::move(elem), std::move(size), Span{start, token_stream.peek_back().span.end});
-}
-
-std::unique_ptr<FuncTypeExpr> Parser::parse_function_type() {
-    // current token is FN_TYPE
-    Loc start = consume().span.start;
-    // expect current token to be L_PAREN
-    expect_or_error(TokenType::L_PAREN, "Expected '(' after 'fn' instead got " + current.to_string());
-    std::vector<std::unique_ptr<TypeExpr>> params;
-    while (current.type != TokenType::R_PAREN && current.type != TokenType::EOF_) {
-        // parse the type expression
-        std::unique_ptr<TypeExpr> type = parse_simple_type();
-        params.push_back(std::move(type));
-        // if there is a comma consume it otherwise break
-        if (!expect(TokenType::COMMA)) {
-            break;
-        }
-    }
-    // expect current token to be R_PAREN
-    expect_or_error(TokenType::R_PAREN, "Expected ')' after function parameters instead got " + current.to_string());
-    // expect current token to be ARROW
-    expect_or_error(TokenType::ARROW, "Expected '->' after function parameters instead got " + current.to_string());
-    // parse the return type
-    std::unique_ptr<TypeExpr> ret = parse_simple_type();
-    return std::make_unique<FuncTypeExpr>(std::move(params), std::move(ret), Span{start, token_stream.peek_back().span.end});
 }
 
 std::unique_ptr<NumberExpr> Parser::parse_number() {

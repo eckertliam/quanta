@@ -36,14 +36,16 @@ private:
     std::unique_ptr<TypeExpr> parse_simple_type();
     /// Parse a symbol type expression
     std::unique_ptr<SymbolTypeExpr> parse_symbol_type();
-    /// Parse a Tuple type expression
-    std::unique_ptr<TupleTypeExpr> parse_tuple_type();
+    /// Parse a generic param list <SymbolTypeExpr, ...>
+    std::vector<std::unique_ptr<SymbolTypeExpr>> parse_generic_params();
+    /// Parse a generic argument list <TypeExpr, ...>
+    std::vector<std::unique_ptr<TypeExpr>> parse_generic_args();
+    /// Parse a bracketed type expression either a tuple or an array
+    std::unique_ptr<TypeExpr> parse_bracketed_type();
+    /// Parse a parenthesized type expression
+    std::unique_ptr<TypeExpr> parse_paren_type();
     /// Parse a sum type expression
     std::unique_ptr<SumTypeExpr> parse_sum_type();
-    /// Parse an array type expression
-    std::unique_ptr<ArrayTypeExpr> parse_array_type();
-    /// Parse a function type expression
-    std::unique_ptr<FuncTypeExpr> parse_function_type();
     /// Parse a number expression
     std::unique_ptr<NumberExpr> parse_number();
 public:

@@ -88,8 +88,6 @@ TokenType get_keyword(const std::string& lexeme) {
         return TokenType::RECORD;
     } else if (lexeme == "enum") {
         return TokenType::ENUM;
-    } else if (lexeme == "Fn") {
-        return TokenType::FN_TYPE;
     } else if (lexeme == "type") {
         return TokenType::TYPE;
     } else if (lexeme == "fn") {

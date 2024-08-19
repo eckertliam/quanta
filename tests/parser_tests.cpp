@@ -112,7 +112,7 @@ TEST(Parser, SumTypeAlias2) {
 }
 
 TEST(Parser, TupleTypeAlias) {
-    std::string src = "type Point = (i32, i32);";
+    std::string src = "type Point = [i32, i32];";
     Parser parser(src);
     auto program = parser.parse_program();
     // we know that the first node in the program is a type alias declaration
@@ -131,7 +131,7 @@ TEST(Parser, TupleTypeAlias) {
 }
 
 TEST(Parser, TupleTypeAlias2) {
-    std::string src = "type SquareMatrix = ((i32, i32), (i32, i32));";
+    std::string src = "type SquareMatrix = [[i32, i32], [i32, i32]];";
     Parser parser(src);
     auto program = parser.parse_program();
     // we know that the first node in the program is a type alias declaration
@@ -177,4 +177,49 @@ TEST(Parser, ArrayTypeAlias) {
     auto size = dynamic_cast<IntExpr*>(array_type->size.get());
     ASSERT_NE(size, nullptr);
     EXPECT_EQ(size->value, 5);
+}
+
+TEST(Parser, GenericEnum) {
+    std::string src = "enum Option<T> { Some: T, None }";
+    Parser parser(src);
+    auto program = parser.parse_program();
+    auto enum_decl = dynamic_cast<EnumDecl*>(program.body[0].get());
+    ASSERT_NE(enum_decl, nullptr);
+    EXPECT_EQ(enum_decl->name, "Option");
+    EXPECT_EQ(enum_decl->generic_params.size(), 1);
+    auto type = dynamic_cast<SymbolTypeExpr*>(enum_decl->generic_params[0].get());
+    ASSERT_NE(type, nullptr);
+    EXPECT_EQ(type->symbol, "T");
+    EXPECT_EQ(enum_decl->variants.size(), 2);
+    EXPECT_EQ(enum_decl->variants[0].first, "Some");
+    type = dynamic_cast<SymbolTypeExpr*>(enum_decl->variants[0].second.get());
+    ASSERT_NE(type, nullptr);
+    EXPECT_EQ(type->symbol, "T");
+    EXPECT_EQ(enum_decl->variants[1].first, "None");
+    EXPECT_EQ(enum_decl->variants[1].second, nullptr);
+}
+
+TEST(Parser, GenericEnum2) {
+    std::string src = "enum Result<T, E> { Ok: T, Err: E }";
+    Parser parser(src);
+    auto program = parser.parse_program();
+    auto enum_decl = dynamic_cast<EnumDecl*>(program.body[0].get());
+    ASSERT_NE(enum_decl, nullptr);
+    EXPECT_EQ(enum_decl->name, "Result");
+    EXPECT_EQ(enum_decl->generic_params.size(), 2);
+    auto type = dynamic_cast<SymbolTypeExpr*>(enum_decl->generic_params[0].get());
+    ASSERT_NE(type, nullptr);
+    EXPECT_EQ(type->symbol, "T");
+    type = dynamic_cast<SymbolTypeExpr*>(enum_decl->generic_params[1].get());
+    ASSERT_NE(type, nullptr);
+    EXPECT_EQ(type->symbol, "E");
+    EXPECT_EQ(enum_decl->variants.size(), 2);
+    EXPECT_EQ(enum_decl->variants[0].first, "Ok");
+    type = dynamic_cast<SymbolTypeExpr*>(enum_decl->variants[0].second.get());
+    ASSERT_NE(type, nullptr);
+    EXPECT_EQ(type->symbol, "T");
+    EXPECT_EQ(enum_decl->variants[1].first, "Err");
+    type = dynamic_cast<SymbolTypeExpr*>(enum_decl->variants[1].second.get());
+    ASSERT_NE(type, nullptr);
+    EXPECT_EQ(type->symbol, "E");
 }

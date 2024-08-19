@@ -62,23 +62,53 @@ public:
     [[nodiscard]] LiteralExpr* clone() const override = 0;
 };
 
+/// a literal type expression (e.g. i32, f64, bool, or user defined type)
+class SymbolTypeExpr : public TypeExpr {
+public:
+    std::string symbol;
+    std::vector<std::unique_ptr<TypeExpr>> generic_args;
+    Span span;
+
+    /// Construct a symbol type expression
+    SymbolTypeExpr(std::string symbol, std::vector<std::unique_ptr<TypeExpr>> generic_args, Span span)
+            : symbol(std::move(symbol)), generic_args(std::move(generic_args)), span(span) {};
+
+    /// Copy constructor
+    SymbolTypeExpr(const SymbolTypeExpr& other) : symbol(other.symbol), generic_args(), span(other.span) {
+        for (const auto& arg : other.generic_args) {
+            auto arg_clone = std::unique_ptr<TypeExpr>(arg->clone());
+            generic_args.push_back(std::move(arg_clone));
+        }
+    };
+
+    /// Clone the symbol type expression
+    [[nodiscard]] SymbolTypeExpr* clone() const override {
+        return new SymbolTypeExpr(*this);
+    }
+};
+
 /// a record type declaration, a product type with named fields e.g 'record Point {x: i32, y: i32}'
 class RecordDecl : public TypeDecl {
 public:
     std::string name;
+    std::vector<std::unique_ptr<SymbolTypeExpr>> generic_params;
     std::vector<std::pair<std::string , std::unique_ptr<TypeExpr>>> fields;
     Span span;
 
     /// Construct a record declaration
-    RecordDecl(std::string name, std::vector<std::pair<std::string, std::unique_ptr<TypeExpr>>> fields, Span span)
-            : name(std::move(name)), fields(std::move(fields)), span(span) {};
+    RecordDecl(std::string name, std::vector<std::unique_ptr<SymbolTypeExpr>> generic_params, std::vector<std::pair<std::string, std::unique_ptr<TypeExpr>>> fields, Span span)
+            : name(std::move(name)), generic_params(std::move(generic_params)), fields(std::move(fields)), span(span) {};
 
     /// Copy constructor
-    RecordDecl(const RecordDecl& other) : name(other.name), fields(), span(other.span) {
+    RecordDecl(const RecordDecl& other) : name(other.name), generic_params(), fields(), span(other.span) {
+        for (const auto& param : other.generic_params) {
+            auto param_clone = std::unique_ptr<SymbolTypeExpr>(param->clone());
+            generic_params.push_back(std::move(param_clone));
+        }
         for (const auto& field : other.fields) {
             auto first = field.first;
-            auto second = std::unique_ptr<TypeExpr>(field.second->clone());
-            fields.emplace_back(first, std::move(second));
+            auto second = field.second->clone();
+            fields.emplace_back(first, second);
         }
     }
 
@@ -88,25 +118,30 @@ public:
     }
 };
 
-/// a discriminated sum type declaration e.g 'enum Expr { Int: i32, Float: f64,}' or 'enum Option { Some: a, None }'
+/// a discriminated sum type declaration e.g 'enum Expr { Int: i32, Float: f64,}' or 'enum Option<a> { Some: a, None }'
 class EnumDecl : public TypeDecl {
 public:
     std::string name;
+    std::vector<std::unique_ptr<SymbolTypeExpr>> generic_params;
     std::vector<std::pair<std::string , std::unique_ptr<TypeExpr>>> variants;
     Span span;
 
     /// Construct an enum declaration
-    EnumDecl(std::string name, std::vector<std::pair<std::string, std::unique_ptr<TypeExpr>>> variants, Span span)
-            : name(std::move(name)), variants(std::move(variants)), span(span) {};
+    EnumDecl(std::string name, std::vector<std::unique_ptr<SymbolTypeExpr>> generic_params, std::vector<std::pair<std::string, std::unique_ptr<TypeExpr>>> variants, Span span)
+            : name(std::move(name)), generic_params(std::move(generic_params)), variants(std::move(variants)), span(span) {};
 
 
     /// Copy constructor
-    EnumDecl(const EnumDecl& other) : name(other.name), variants(), span(other.span) {
+    EnumDecl(const EnumDecl& other) : name(other.name), generic_params(), variants(), span(other.span) {
+        for (const auto& param : other.generic_params) {
+            auto param_clone = std::unique_ptr<SymbolTypeExpr>(param->clone());
+            generic_params.push_back(std::move(param_clone));
+        }
         for (const auto& variant : other.variants) {
             auto first = variant.first;
             if (variant.second) {
-                auto second = std::unique_ptr<TypeExpr>(variant.second->clone());
-                variants.emplace_back(first, std::move(second));
+                auto second = variant.second->clone();
+                variants.emplace_back(first, second);
             } else {
                 variants.emplace_back(first, nullptr);
             }
@@ -119,19 +154,26 @@ public:
     }
 };
 
-/// a type alias declaration e.g 'type Int = i32' or 'type Point = (i32, i32)'
+/// a type alias declaration e.g 'type Int = i32' or 'type Point = [i32, i32]'
 class TypeAliasDecl : public TypeDecl {
 public:
     std::string name;
+    std::vector<std::unique_ptr<SymbolTypeExpr>> generic_params;
     std::unique_ptr<TypeExpr> type;
     Span span;
 
     /// Construct a type alias declaration
-    TypeAliasDecl(std::string name, std::unique_ptr<TypeExpr> type, Span span)
-            : name(std::move(name)), type(std::move(type)), span(span) {};
+    TypeAliasDecl(std::string name, std::vector<std::unique_ptr<SymbolTypeExpr>> generic_params, std::unique_ptr<TypeExpr> type, Span span)
+            : name(std::move(name)), generic_params(std::move(generic_params)), type(std::move(type)), span(span) {};
 
     /// Copy constructor
-    TypeAliasDecl(const TypeAliasDecl& other) : name(other.name), type(other.type->clone()), span(other.span) {};
+    TypeAliasDecl(const TypeAliasDecl& other)
+            : name(other.name), generic_params(), type(other.type->clone()), span(other.span) {
+        for (const auto& param : other.generic_params) {
+            auto param_clone = std::unique_ptr<SymbolTypeExpr>(param->clone());
+            generic_params.push_back(std::move(param_clone));
+        }
+    };
 
     /// Clone the type alias declaration
     [[nodiscard]] TypeAliasDecl* clone() const override {
@@ -139,26 +181,7 @@ public:
     }
 };
 
-/// a literal type expression (e.g. i32, f64, bool, or user defined type)
-class SymbolTypeExpr : public TypeExpr {
-public:
-    std::string symbol;
-    Span span;
-
-    /// Construct a symbol type expression
-    SymbolTypeExpr(std::string symbol, Span span)
-            : symbol(std::move(symbol)), span(span) {};
-
-    /// Copy constructor
-    SymbolTypeExpr(const SymbolTypeExpr& other) : symbol(other.symbol), span(other.span) {};
-
-    /// Clone the symbol type expression
-    [[nodiscard]] SymbolTypeExpr* clone() const override {
-        return new SymbolTypeExpr(*this);
-    }
-};
-
-/// a positional product type expression e.g. (i32, f64) or (i32, f64, bool) etc
+/// a positional product type expression e.g. [i32, f64] [T_0 ... T_N]
 class TupleTypeExpr : public TypeExpr {
 public:
     std::vector<std::unique_ptr<TypeExpr>> fields;
@@ -208,7 +231,7 @@ public:
     }
 };
 
-/// an array type expression e.g. [i32] if a value is provided or [i32 4] if a size is provided
+/// an array type expression e.g. [T; N]
 class ArrayTypeExpr : public TypeExpr {
 public:
     std::unique_ptr<TypeExpr> elem;
@@ -225,31 +248,6 @@ public:
     /// Clone the array type expression
     [[nodiscard]] ArrayTypeExpr* clone() const override {
         return new ArrayTypeExpr(*this);
-    }
-};
-
-/// a function type expression e.g. (i32, f64) -> bool
-class FuncTypeExpr : public TypeExpr {
-public:
-    std::vector<std::unique_ptr<TypeExpr>> params;
-    std::unique_ptr<TypeExpr> ret;
-    Span span;
-
-    /// Construct a function type expression
-    FuncTypeExpr(std::vector<std::unique_ptr<TypeExpr>> params, std::unique_ptr<TypeExpr> ret, Span span)
-            : params(std::move(params)), ret(std::move(ret)), span(span) {};
-
-    /// Copy constructor
-    FuncTypeExpr(const FuncTypeExpr& other) : params(), ret(other.ret->clone()), span(other.span) {
-        for (const auto& param : other.params) {
-            auto clone = std::unique_ptr<TypeExpr>(param->clone());
-            params.push_back(std::move(clone));
-        }
-    }
-
-    /// Clone the function type expression
-    [[nodiscard]] FuncTypeExpr* clone() const override {
-        return new FuncTypeExpr(*this);
     }
 };
 
