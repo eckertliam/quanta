@@ -5,11 +5,41 @@
 #include <utility>
 #include <vector>
 
+class AstNode;
+class Program;
+class SymbolTypeExpr;
+class RecordDecl;
+class EnumDecl;
+class TypeAliasDecl;
+class TupleTypeExpr;
+class SumTypeExpr;
+class ArrayTypeExpr;
+class IntExpr;
+class FloatExpr;
+
+class AstVisitor {
+public:
+    virtual void visit(const AstNode& node) = 0;
+    virtual void visit(const Program& node) = 0;
+    virtual void visit(const SymbolTypeExpr& node) = 0;
+    virtual void visit(const RecordDecl& node) = 0;
+    virtual void visit(const EnumDecl& node) = 0;
+    virtual void visit(const TypeAliasDecl& node) = 0;
+    virtual void visit(const TupleTypeExpr& node) = 0;
+    virtual void visit(const SumTypeExpr& node) = 0;
+    virtual void visit(const ArrayTypeExpr& node) = 0;
+    virtual void visit(const IntExpr& node) = 0;
+    virtual void visit(const FloatExpr& node) = 0;
+};
+
 /// A node in the abstract syntax tree
 class AstNode {
 public:
     virtual ~AstNode() = default;
     [[nodiscard]] virtual AstNode* clone() const = 0;
+    virtual void accept(AstVisitor& visitor) const {
+        visitor.visit(*this);
+    }
 };
 
 class Program {
@@ -35,6 +65,11 @@ public:
     /// push a node to the back of the body
     void push_back(std::unique_ptr<AstNode> node) {
         body.push_back(std::move(node));
+    }
+
+    /// accept a visitor
+    void accept(AstVisitor& visitor) const {
+        visitor.visit(*this);
     }
 };
 
@@ -85,6 +120,11 @@ public:
     [[nodiscard]] SymbolTypeExpr* clone() const override {
         return new SymbolTypeExpr(*this);
     }
+
+    /// accept a visitor
+    void accept(AstVisitor& visitor) const override {
+        visitor.visit(*this);
+    }
 };
 
 /// a record type declaration, a product type with named fields e.g 'record Point {x: i32, y: i32}'
@@ -115,6 +155,11 @@ public:
     /// Clone the record declaration
     [[nodiscard]] RecordDecl* clone() const override {
         return new RecordDecl(*this);
+    }
+
+    /// accept a visitor
+    void accept(AstVisitor& visitor) const override {
+        visitor.visit(*this);
     }
 };
 
@@ -152,6 +197,11 @@ public:
     [[nodiscard]] EnumDecl* clone() const override {
         return new EnumDecl(*this);
     }
+
+    /// accept a visitor
+    void accept(AstVisitor& visitor) const override {
+        visitor.visit(*this);
+    }
 };
 
 /// a type alias declaration e.g 'type Int = i32' or 'type Point = [i32, i32]'
@@ -179,6 +229,11 @@ public:
     [[nodiscard]] TypeAliasDecl* clone() const override {
         return new TypeAliasDecl(*this);
     }
+
+    /// accept a visitor
+    void accept(AstVisitor& visitor) const override {
+        visitor.visit(*this);
+    }
 };
 
 /// a positional product type expression e.g. [i32, f64] [T_0 ... T_N]
@@ -205,6 +260,11 @@ public:
     [[nodiscard]] TupleTypeExpr* clone() const override {
         return new TupleTypeExpr(*this);
     }
+
+    /// accept a visitor
+    void accept(AstVisitor& visitor) const override {
+        visitor.visit(*this);
+    }
 };
 
 /// a sum type expression e.g. i32 | f64
@@ -229,6 +289,11 @@ public:
     [[nodiscard]] SumTypeExpr* clone() const override {
         return new SumTypeExpr(*this);
     }
+
+    /// accept a visitor
+    void accept(AstVisitor& visitor) const override {
+        visitor.visit(*this);
+    }
 };
 
 /// an array type expression e.g. [T; N]
@@ -248,6 +313,11 @@ public:
     /// Clone the array type expression
     [[nodiscard]] ArrayTypeExpr* clone() const override {
         return new ArrayTypeExpr(*this);
+    }
+
+    /// accept a visitor
+    void accept(AstVisitor& visitor) const override {
+        visitor.visit(*this);
     }
 };
 
@@ -273,6 +343,11 @@ public:
     [[nodiscard]] IntExpr* clone() const override {
         return new IntExpr(*this);
     }
+
+    /// accept a visitor
+    void accept(AstVisitor& visitor) const override {
+        visitor.visit(*this);
+    }
 };
 
 /// a floating point literal expression
@@ -290,6 +365,11 @@ public:
     /// Clone the floating point expression
     [[nodiscard]] FloatExpr* clone() const override {
         return new FloatExpr(*this);
+    }
+
+    /// accept a visitor
+    void accept(AstVisitor& visitor) const override {
+        visitor.visit(*this);
     }
 };
 
