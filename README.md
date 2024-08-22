@@ -1,5 +1,6 @@
 # Quanta IR
 ## Introduction
+### **QUANTA IR IS A WIP DO NOT USE**
 Quanta IR is meant to be a simple and modifiable intermediate representation for compilers.
 It is designed to be easier to get off the ground with than LLVM IR. Making it ideal for 
 hobby projects, DSLs, and educational purposes. It is also designed to be easy to modify with its
