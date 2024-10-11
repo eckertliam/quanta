@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import List, Optional
 from enum import Enum, auto
 
 
@@ -8,31 +8,80 @@ class Loc:
         self.col = col
 
 
-class ExprType(Enum):
-    INT = auto()
-    FLOAT = auto()
-    STRING = auto()
-    SYMBOL = auto()
-    BOOL = auto()
-    LIST = auto()
-    NULL = auto()
-    
+class AstNode:
+    def __init__(self, loc: Loc):
+        self.loc = loc
 
-ExprValue = Union[int, float, str, bool, None, List['Expr']]
-    
 
-class Expr:
-    def __init__(self, value: ExprValue, expr_type: ExprType, start: Loc, end: Loc):
-        self.start = start
-        self.end = end
+class Atom(AstNode):
+    def __init__(self, value: any, loc: Loc):
+        super().__init__(loc)
         self.value = value
-        self.expr_type = expr_type
-        
-    def __str__(self):
-        if self.expr_type == ExprType.LIST:
-            return f"({' '.join(map(str, self.value.elements))})"
-        elif self.expr_type == ExprType.STRING:
-            return f'"{self.value.value}"'
+
+class Int(Atom):
+    def __init__(self, value: int, loc: Loc):
+        super().__init__(value, loc)
+
+
+class Float(Atom):
+    def __init__(self, value: float, loc: Loc):
+        super().__init__(value, loc)
+
+
+class String(Atom):
+    def __init__(self, value: str, loc: Loc):
+        super().__init__(value, loc)
+
+
+class Bool(Atom):
+    def __init__(self, value: bool, loc: Loc):
+        super().__init__(value, loc)
+
+
+class Symbol(Atom):
+    def __init__(self, value: str, loc: Loc):
+        super().__init__(value, loc)
+
+
+class Delimiter(Enum):
+    Paren = auto()
+    Bracket = auto()
+    Brace = auto()
+
+    def open(self):
+        if self == Delimiter.Paren:
+            return '('
+        elif self == Delimiter.Bracket:
+            return '['
+        elif self == Delimiter.Brace:
+            return '{'
+
+    def close(self):
+        if self == Delimiter.Paren:
+            return ')'
+        elif self == Delimiter.Bracket:
+            return ']'
+        elif self == Delimiter.Brace:
+            return '}'
+
+    @staticmethod
+    def as_delim(delim: str) -> Optional['Delimiter']:
+        if delim == '(':
+            return Delimiter.Paren
+        elif delim == '[':
+            return Delimiter.Bracket
+        elif delim == '{':
+            return Delimiter.Brace
         else:
-            return str(self.value.value)
-    
+            return None
+
+
+class Form(AstNode):
+    """
+    A form is a list of elements
+    Refined into an array, vec, function call, etc. during MIR generation
+    """
+    def __init__(self, elements: List[AstNode], delim: Delimiter, loc: Loc):
+        super().__init__(loc)
+        self.elements = elements
+        self.delim = delim

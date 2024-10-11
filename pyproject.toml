@@ -3,12 +3,10 @@ name = "quanta"
 version = "0.1.0"
 description = ""
 authors = ["Liam Eckert <liameckert17@gmail.com>"]
-license = "APACHE-2.0"
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-llvmlite = "^0.43.0"
 
 
 [build-system]
