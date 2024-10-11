@@ -1,4 +1,13 @@
-(: main (void -> void))
-(def main
-    (lambda ()
-        (println "Hello, World!")))
+fn add
+    a: int
+    b: int
+    -> int
+begin
+    return a + b;
+end
+
+fn main
+     -> void
+begin
+    println("Hello, World!");
+end
