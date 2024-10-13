@@ -18,6 +18,12 @@ class Node:
     def __init__(self, loc: Loc):
         self.loc = loc
 
+class Program:
+    def __init__(self, stmts: List['Statement']):
+        self.stmts = stmts
+
+    def push(self, stmt: 'Statement'):
+        self.stmts.append(stmt)
 
 class Statement(Node):
     pass
@@ -58,7 +64,7 @@ class LetDecl(Statement):
 
 class VarDecl:
     @staticmethod
-    def __call__(name: str, mut: bool, ty: Type, value: Expression, loc: Loc) -> Union[ConstDecl, LetDecl]:
+    def init(name: str, mut: bool, ty: Type, value: Expression, loc: Loc) -> Union[ConstDecl, LetDecl]:
         if mut:
             return LetDecl(name, ty, value, loc)
         else:

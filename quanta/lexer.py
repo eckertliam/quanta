@@ -36,6 +36,7 @@ class TokenKind(Enum):
     FALSE = auto()
     BEGIN = auto()
     END = auto()
+    PUB = auto()
     # Regular tokens
     LPAREN = auto()
     RPAREN = auto()
@@ -104,7 +105,38 @@ class Token:
         return str(self)
 
 
-class Chars:
+class TokenIter:
+    def __init__(self, tokens: List[Token]):
+        self.tokens = tokens
+        self.idx = 0
+
+    def eof(self) -> bool:
+        return self.idx >= len(self.tokens) or self.tokens[self.idx].kind == TokenKind.EOF
+
+    def peek(self, offset: Optional[int] = None) -> Optional[Token]:
+        if self.eof():
+            return None
+        elif offset is not None:
+            return self.tokens[self.idx + offset]
+        else:
+            return self.tokens[self.idx]
+
+    def next(self) -> Optional[Token]:
+        if self.eof():
+            return None
+        token = self.tokens[self.idx]
+        self.idx += 1
+        return token
+
+    def match(self, kind: TokenKind) -> Optional[Token]:
+        token = self.peek()
+        if token is not None and token.kind == kind:
+            return self.next()
+        return None
+
+
+
+class CharIter:
     def __init__(self, src: str):
         self.src = src
         self.idx = 0
@@ -142,21 +174,21 @@ class Chars:
         return Loc(self.line, self.col)
 
 
-def lex_symbol(chars: Chars) -> str:
+def lex_symbol(chars: CharIter) -> str:
     symbol = chars.peek()
     while not chars.is_end() and chars.peek().isalnum() or chars.peek() == '_':
         symbol += chars.next()
     return symbol
 
 
-def lex_int(chars: Chars) -> str:
+def lex_int(chars: CharIter) -> str:
     integer = chars.peek()
     while not chars.is_end() and chars.peek().isdigit():
         integer += chars.next()
     return integer
 
 
-def lex_number(chars: Chars) -> Tuple[str, TokenKind]:
+def lex_number(chars: CharIter) -> Tuple[str, TokenKind]:
     integer = lex_int(chars)
     if chars.peek() == '.' and chars.peek(1).isdigit():
         chars.next()
@@ -165,7 +197,7 @@ def lex_number(chars: Chars) -> Tuple[str, TokenKind]:
     return integer, TokenKind.INT
 
 
-def lex_string(chars: Chars) -> str:
+def lex_string(chars: CharIter) -> str:
     string = ""
     while not chars.is_end() and chars.peek() != '"':
         if chars.peek() == '\\':
@@ -202,11 +234,12 @@ KEYWORDS = {
     "false": TokenKind.FALSE,
     "begin": TokenKind.BEGIN,
     "end": TokenKind.END,
+    "pub": TokenKind.PUB,
 }
 
 
-def lex(src: str) -> List[Token]:
-    chars = Chars(src)
+def lex(src: str) -> TokenIter:
+    chars = CharIter(src)
     tokens = []
     start_loc = chars.get_loc()
 
@@ -353,4 +386,4 @@ def lex(src: str) -> List[Token]:
                     push(TokenKind.STRING, string)
             case _:
                 push(TokenKind.ERROR, f"[-] Unexpected character: {chars.next()}")
-    return tokens
+    return TokenIter(tokens)
