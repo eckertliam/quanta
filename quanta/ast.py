@@ -8,78 +8,78 @@ class Loc:
         self.col = col
 
 
-class AstNode:
+class Node:
     def __init__(self, loc: Loc):
         self.loc = loc
 
 
-class AstStmt(AstNode):
+class Statement(Node):
     pass
 
-class AstExpr(AstNode):
+class Expression(Node):
     pass
 
-class AstType(AstNode):
+class Type(Node):
     pass
 
-class AstBlock(AstStmt):
-    def __init__(self, stmts: List[AstStmt], loc: Loc):
+class Block(Statement):
+    def __init__(self, stmts: List[Statement], loc: Loc):
         super().__init__(loc)
         self.stmts = stmts
 
-    def push(self, stmt: AstStmt):
+    def push(self, stmt: Statement):
         self.stmts.append(stmt)
 
-class AstConstDecl(AstStmt):
-    def __init__(self, name: str, ty: AstType, value: AstExpr, loc: Loc):
+class ConstDecl(Statement):
+    def __init__(self, name: str, ty: Type, value: Expression, loc: Loc):
         super().__init__(loc)
         self.name = name
         self.ty = ty
         self.value = value
 
-class AstLetDecl(AstStmt):
-    def __init__(self, name: str, ty: AstType, value: AstExpr, loc: Loc):
+class LetDecl(Statement):
+    def __init__(self, name: str, ty: Type, value: Expression, loc: Loc):
         super().__init__(loc)
         self.name = name
         self.ty = ty
         self.value = value
 
-class AstVarDecl:
+class VarDecl:
     @staticmethod
-    def __call__(name: str, mut: bool, ty: AstType, value: AstExpr, loc: Loc) -> Union[AstConstDecl, AstLetDecl]:
+    def __call__(name: str, mut: bool, ty: Type, value: Expression, loc: Loc) -> Union[ConstDecl, LetDecl]:
         if mut:
-            return AstLetDecl(name, ty, value, loc)
+            return LetDecl(name, ty, value, loc)
         else:
-            return AstConstDecl(name, ty, value, loc)
+            return ConstDecl(name, ty, value, loc)
 
-class AstTypeDecl(AstStmt):
-    def __init__(self, name: str, generics: List[str], ty: AstType, loc: Loc):
+class TypeDecl(Statement):
+    def __init__(self, name: str, generics: List[str], ty: Type, loc: Loc):
         super().__init__(loc)
         self.name = name
         self.generics = generics
         self.ty = ty
 
-class AstStructField:
-    def __init__(self, name: str, ty: AstType, loc: Loc):
+class StructField:
+    def __init__(self, name: str, ty: Type, loc: Loc):
         self.name = name
         self.ty = ty
         self.loc = loc
 
-class AstStructDecl(AstStmt):
-    def __init__(self, name: str, generics: List[str], fields: List[AstStructField], loc: Loc):
+class StructDecl(Statement):
+    def __init__(self, name: str, generics: List[str], fields: List[StructField], loc: Loc):
         super().__init__(loc)
         self.name = name
         self.generics = generics
         self.fields = fields
 
-class AstFnParam:
-    def __init__(self, name: str, ty: AstType, loc: Loc):
+class FnParam:
+    def __init__(self, name: str, ty: Type, loc: Loc):
         self.name = name
         self.ty = ty
         self.loc = loc
 
-class AstFnDecl(AstStmt):
-    def __init__(self, name: str, generics: List[str], params: List[AstFnParam], ret_ty: AstType, body: AstBlock, loc: Loc):
+class FnDecl(Statement):
+    def __init__(self, name: str, generics: List[str], params: List[FnParam], ret_ty: Type, body: Block, loc: Loc):
         super().__init__(loc)
         self.name = name
         self.generics = generics
@@ -87,26 +87,26 @@ class AstFnDecl(AstStmt):
         self.ret_ty = ret_ty
         self.body = body
 
-class AstIfStmt(AstStmt):
-    def __init__(self, cond: AstExpr, then_block: AstBlock, else_block: Optional[AstBlock], loc: Loc):
+class IfStmt(Statement):
+    def __init__(self, cond: Expression, then_block: Block, else_block: Optional[Block], loc: Loc):
         super().__init__(loc)
         self.cond = cond
         self.then_block = then_block
         self.else_block = else_block
 
-class AstLambdaStmt(AstStmt):
-    def __init__(self, params: List[AstFnParam], ret_ty: AstType, body: AstBlock, loc: Loc):
+class LambdaStmt(Statement):
+    def __init__(self, params: List[FnParam], ret_ty: Type, body: Block, loc: Loc):
         super().__init__(loc)
         self.params = params
         self.ret_ty = ret_ty
         self.body = body
 
-class AstReturnStmt(AstStmt):
-    def __init__(self, value: AstExpr, loc: Loc):
+class ReturnStmt(Statement):
+    def __init__(self, value: Expression, loc: Loc):
         super().__init__(loc)
         self.value = value
 
-class AstBinOpKind(Enum):
+class BinOpKind(Enum):
     ADD = auto()
     SUB = auto()
     MUL = auto()
@@ -121,127 +121,123 @@ class AstBinOpKind(Enum):
     GT = auto()
     GE = auto()
 
-class AstBinOp(AstExpr):
-    def __init__(self, kind: AstBinOpKind, lhs: AstExpr, rhs: AstExpr, loc: Loc):
+class BinOp(Expression):
+    def __init__(self, kind: BinOpKind, lhs: Expression, rhs: Expression, loc: Loc):
         super().__init__(loc)
         self.kind = kind
         self.lhs = lhs
         self.rhs = rhs
 
-class AstUnOpKind(Enum):
+class UnOpKind(Enum):
     NEG = auto()
     NOT = auto()
 
-class AstUnOp(AstExpr):
-    def __init__(self, kind: AstUnOpKind, expr: AstExpr, loc: Loc):
+class UnOp(Expression):
+    def __init__(self, kind: UnOpKind, expr: Expression, loc: Loc):
         super().__init__(loc)
         self.kind = kind
         self.expr = expr
 
-class AstCall(AstExpr):
-    def __init__(self, callee: AstExpr, args: List[AstExpr], loc: Loc):
+class FnCall(Expression):
+    def __init__(self, callee: Expression, args: List[Expression], loc: Loc):
         super().__init__(loc)
         self.callee = callee
         self.args = args
 
-class AstSymbol(AstExpr):
+class Symbol(Expression):
     def __init__(self, name: str, loc: Loc):
         super().__init__(loc)
         self.name = name
 
-class AstInt(AstExpr):
+class Int(Expression):
     def __init__(self, value: int, loc: Loc):
         super().__init__(loc)
         self.value = value
 
-class AstFloat(AstExpr):
+class Float(Expression):
     def __init__(self, value: float, loc: Loc):
         super().__init__(loc)
         self.value = value
 
-class AstBool(AstExpr):
+class Bool(Expression):
     def __init__(self, value: bool, loc: Loc):
         super().__init__(loc)
         self.value = value
 
-class AstString(AstExpr):
+class String(Expression):
     def __init__(self, value: str, loc: Loc):
         super().__init__(loc)
         self.value = value
 
-class AstArray(AstExpr):
-    def __init__(self, elements: List[AstExpr], loc: Loc):
+class Array(Expression):
+    def __init__(self, elements: List[Expression], loc: Loc):
         super().__init__(loc)
         self.elements = elements
 
-class AstStructLiteral(AstExpr):
-    def __init__(self, fields: List[AstExpr], loc: Loc):
+class StructLiteral(Expression):
+    def __init__(self, fields: List[Expression], loc: Loc):
         super().__init__(loc)
         self.fields = fields
 
-class AstFieldAccess(AstExpr):
-    def __init__(self, expr: AstExpr, field: str, loc: Loc):
+class FieldAccess(Expression):
+    def __init__(self, expr: Expression, field: str, loc: Loc):
         super().__init__(loc)
         self.expr = expr
         self.field = field
 
-class AstIndexAccess(AstExpr):
-    def __init__(self, expr: AstExpr, index: AstExpr, loc: Loc):
+class IndexAccess(Expression):
+    def __init__(self, expr: Expression, index: Expression, loc: Loc):
         super().__init__(loc)
         self.expr = expr
         self.index = index
 
-class AstExprBlock(AstExpr):
-    def __init__(self, expr: AstExpr, loc: Loc):
+class ExprBlock(Expression):
+    def __init__(self, expr: Expression, loc: Loc):
         super().__init__(loc)
         self.expr = expr
 
-class AstTypeInt(AstType):
+class IntType(Type):
     def __init__(self, size: int, loc: Loc):
         super().__init__(loc)
         self.size = size
         assert size in [8, 16, 32, 64]
 
-class AstTypeFloat(AstType):
+class FloatType(Type):
     def __init__(self, size: int, loc: Loc):
         super().__init__(loc)
         self.size = size
         assert size in [32, 64]
 
-class AstTypeBool(AstType):
+class BoolType(Type):
     def __init__(self, loc: Loc):
         super().__init__(loc)
 
-class AstTypeString(AstType):
+class StringType(Type):
     def __init__(self, loc: Loc):
         super().__init__(loc)
 
-class AstTypeArray(AstType):
-    def __init__(self, elem_ty: AstType, loc: Loc):
+class ArrayType(Type):
+    def __init__(self, elem_ty: Type, loc: Loc):
         super().__init__(loc)
         self.elem_ty = elem_ty
 
-class AstTypeStruct(AstType):
-    def __init__(self, name: str, generics: List[AstType], loc: Loc):
+class StructType(Type):
+    def __init__(self, name: str, generics: List[Type], loc: Loc):
         super().__init__(loc)
         self.name = name
         self.generics = generics
 
-class AstTypeFn(AstType):
-    def __init__(self, params: List[AstType], ret_ty: AstType, loc: Loc):
+class FnType(Type):
+    def __init__(self, params: List[Type], ret_ty: Type, loc: Loc):
         super().__init__(loc)
         self.params = params
         self.ret_ty = ret_ty
 
-class AstTypeGeneric(AstType):
+class TypeVar(Type):
     def __init__(self, name: str, loc: Loc):
         super().__init__(loc)
         self.name = name
 
-class AstTypeVoid(AstType):
-    def __init__(self, loc: Loc):
-        super().__init__(loc)
-
-class AstTypeAny(AstType):
+class VoidType(Type):
     def __init__(self, loc: Loc):
         super().__init__(loc)

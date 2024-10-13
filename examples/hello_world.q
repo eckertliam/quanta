@@ -23,6 +23,7 @@ fn main() -> void
 begin
     const p1 = Point(1, 2);
     const p2 = Point(3, 4);
-    const p3 = p1 + p2;
+    # types can be inferred as above or explicitly declared as below
+    const p3: Point = p1 + p2;
     println("Hello, World!");
 end
