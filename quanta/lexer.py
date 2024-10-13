@@ -200,8 +200,6 @@ KEYWORDS = {
     "type": TokenKind.TYPE,
     "true": TokenKind.TRUE,
     "false": TokenKind.FALSE,
-    "begin": TokenKind.BEGIN,
-    "end": TokenKind.END,
 }
 
 
