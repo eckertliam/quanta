@@ -50,19 +50,15 @@ class Type(Node):
 
 
 class Block(Statement):
-    def __init__(self, start: Loc, end: Loc, stmts: List[Statement]=None):
+    def __init__(self, start: Loc, end: Loc, stmts: List[Statement]):
         super().__init__(start, end)
-        if stmts is None:
-            stmts = []
         self.stmts = stmts
-
-    def push(self, stmt: Statement):
-        self.stmts.append(stmt)
 
 
 class ConstDecl(Statement):
     def __init__(self, name: str, ty: Type, value: Expression, start: Loc, end: Loc):
         super().__init__(start, end)
+        self.pub = pub
         self.name = name
         self.ty = ty
         self.value = value
