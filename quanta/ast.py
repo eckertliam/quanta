@@ -1,84 +1,120 @@
-from typing import List
-from enum import Enum, auto
-
-class Loc:
-    def __init__(self, line: int, col: int):
-        self.line = line
-        self.col = col
-
-    def __str__(self):
-        return f"{self.line}:{self.col}"
-    
-
-class Span:
-    def __init__(self, start: Loc, end: Loc):
-        self.start = start
-        self.end = end
-
-    def __str__(self):
-        return f"{self.start} - {self.end}"
+from dataclasses import dataclass
+from typing import List, Tuple, Optional, Union
+from quanta.tokenizer import Loc
 
 
-class Expr:
-    def __init__(self, span: Span):
-        self.span = span
+@dataclass
+class Node:
+    loc: Loc
 
 
-class Atom(Expr):
+@dataclass
+class Expression(Node):
     pass
 
 
-class Symbol(Atom):
-    def __init__(self, span: Span, value: str):
-        super().__init__(span)
-        self.value = value
+@dataclass
+class Statement(Node):
+    pass
 
 
-class Integer(Atom):
-    def __init__(self, span: Span, value: int):
-        super().__init__(span)
-        self.value = value
+@dataclass
+class TypeAnnotation(Node):
+    pass
 
 
-class Float(Atom):
-    def __init__(self, span: Span, value: float):
-        super().__init__(span)
-        self.value = value
+@dataclass
+class Program(Node):
+    statements: List[Statement]
 
 
-class String(Atom):
-    def __init__(self, span: Span, value: str):
-        super().__init__(span)
-        self.value = value
+@dataclass
+class Block(Node):
+    statements: List[Statement]
 
 
-class Boolean(Atom):
-    def __init__(self, span: Span, value: bool):
-        super().__init__(span)
-        self.value = value
+FnParam = Tuple[str, Optional[TypeAnnotation]]
+@dataclass
+class FnDef(Statement):
+    name: str
+    params: List[FnParam]
+    body: Block
 
 
-class Nil(Atom):
-    def __init__(self, span: Span):
-        super().__init__(span)
+@dataclass
+class VarDef(Statement):
+    mut: bool
+    name: str
+    ty: Optional[TypeAnnotation]
+    value: Expression
 
-class DelimKind(Enum):
-    # ()
-    PAREN = auto()
-    # []
-    BRACKET = auto()
-    # {}
-    BRACE = auto()
 
-class Delim(Expr):
-    def __init__(self, span: Span, elements: List[Expr], kind: DelimKind):
-        super().__init__(span)
-        self.elements = elements
-        self.kind = kind
+@dataclass
+class RecordDefField(Node):
+    name: str
+    ty: TypeAnnotation
+    default: Optional[Expression]
 
-class Program:
-    """
-    Top-level program structure.
-    """
-    def __init__(self, body: List[Expr]=[]):
-        self.body = body
+
+@dataclass
+class RecordDef(Statement):
+    name: str
+    fields: List[RecordDefField]
+
+
+@dataclass
+class Symbol(Expression):
+    name: str
+
+@dataclass
+class Integer(Expression):
+    value: int
+
+
+@dataclass
+class Float(Expression):
+    value: float
+
+
+@dataclass
+class String(Expression):
+    value: str
+
+
+@dataclass
+class Boolean(Expression):
+    value: bool
+
+
+@dataclass
+class Array(Expression):
+    values: List[Expression]
+
+
+@dataclass
+class RecordInstField(Expression):
+    name: Optional[str]
+    value: Expression
+
+
+@dataclass
+class RecordInstance(Expression):
+    fields: List[RecordInstField]
+
+
+@dataclass
+class FieldAccess(Expression):
+    record: Expression
+    field: Expression
+
+
+@dataclass
+class Call(Expression):
+    callee: Expression
+    args: List[Expression]
+
+
+@dataclass
+class Index(Expression):
+    array: Expression
+    index: Expression
