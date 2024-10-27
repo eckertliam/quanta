@@ -87,3 +87,22 @@ def consume(tokenizer: Tokenizer) -> Token:
         tokenizer.col += 1
     return token
 
+
+def take(tokenizer: Tokenizer, start: int, end: int) -> str:
+    return tokenizer.src[start:end]
+
+
+def read_number(tokenizer: Tokenizer) -> Token:
+    start_loc = Loc(tokenizer.col, tokenizer.line)
+    start_idx = tokenizer.idx
+    while peek(tokenizer).isdigit():
+        consume(tokenizer)
+    if peek(tokenizer) == ".":
+        consume(tokenizer)
+        while peek(tokenizer).isdigit():
+            consume(tokenizer)
+        return Token(TokenType.FLOAT, start_loc, take(tokenizer, start_idx, tokenizer.idx))
+    else:
+        return Token(TokenType.INTEGER, start_loc, take(tokenizer, start_idx, tokenizer.idx))
+
+
