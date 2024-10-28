@@ -34,6 +34,8 @@ class Block(Node):
 
 
 FnParam = Tuple[str, Optional[TypeAnnotation]]
+
+
 @dataclass
 class FnDef(Statement):
     name: str
@@ -50,16 +52,23 @@ class VarDef(Statement):
 
 
 @dataclass
-class RecordDefField(Node):
-    name: str
-    ty: TypeAnnotation
-    default: Optional[Expression]
+class If(Statement):
+    cond: Expression
+    body: Block
+    else_body: Optional[Block]
 
 
 @dataclass
-class RecordDef(Statement):
-    name: str
-    fields: List[RecordDefField]
+class Match(Statement):
+    expr: Expression
+    cases: List[Tuple[Expression, Block]]
+
+
+
+@dataclass
+class While(Statement):
+    cond: Expression
+    body: Block
 
 
 @dataclass
@@ -92,14 +101,19 @@ class Array(Expression):
 
 
 @dataclass
-class RecordInstField(Expression):
+class ObjectField(Expression):
     name: Optional[str]
     value: Expression
 
 
 @dataclass
-class RecordInstance(Expression):
-    fields: List[RecordInstField]
+class Object(Expression):
+    fields: List[ObjectField]
+
+
+@dataclass
+class Array(Expression):
+    values: List[Expression]
 
 
 @dataclass
