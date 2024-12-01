@@ -1,15 +1,21 @@
 from dataclasses import dataclass
-from typing import List, Tuple, Optional, Union
-from quanta.tokenizer import Loc
+from typing import Optional
+
+from quanta.parser import TokenType
 
 
 @dataclass
 class Node:
-    loc: Loc
+    pass
 
 
 @dataclass
-class Expression(Node):
+class Expr(Node):
+    pass
+
+
+@dataclass
+class TypeExpr(Expr):
     pass
 
 
@@ -19,116 +25,260 @@ class Statement(Node):
 
 
 @dataclass
-class TypeAnnotation(Node):
-    pass
-
-
-@dataclass
 class Program(Node):
-    statements: List[Statement]
+    statements: list[Statement]
+
+# Statements ========================
+
+@dataclass
+class Block(Statement, Expr):
+    statements: list[Statement]
 
 
 @dataclass
-class Block(Node):
-    statements: List[Statement]
-
-
-FnParam = Tuple[str, Optional[TypeAnnotation]]
+class FnParam(Node):
+    """A function parameter"""
+    name: str
+    type: TypeExpr
 
 
 @dataclass
 class FnDef(Statement):
+    """Defines a function"""
     name: str
-    params: List[FnParam]
+    params: list[FnParam]
+    return_type: TypeExpr
     body: Block
 
 
 @dataclass
-class VarDef(Statement):
-    mut: bool
+class ConstDecl(Statement):
+    """Declares a constant"""
     name: str
-    ty: Optional[TypeAnnotation]
-    value: Expression
+    type: Optional[TypeExpr]
+    value: Expr
+    
+
+@dataclass
+class VarDecl(Statement):
+    """Declares a variable"""
+    name: str
+    type: Optional[TypeExpr]
+    value: Expr
+    
+    
+@dataclass
+class Assign(Statement):
+    """Mutates a variable"""
+    name: str
+    value: Expr
 
 
 @dataclass
 class If(Statement):
-    cond: Expression
+    """An if statement"""
+    condition: Expr
     body: Block
     else_body: Optional[Block]
 
 
 @dataclass
-class Match(Statement):
-    expr: Expression
-    cases: List[Tuple[Expression, Block]]
-
-
-
-@dataclass
-class While(Statement):
-    cond: Expression
+class MatchCase(Node):
+    """A match case"""
+    # None if the case is a default
+    pattern: Optional[Expr]
     body: Block
 
 
 @dataclass
-class Symbol(Expression):
-    name: str
+class Match(Statement):
+    """A match statement"""
+    value: Expr
+    cases: list[MatchCase]
+    
 
 @dataclass
-class Integer(Expression):
+class Return(Statement):
+    """Returns a value from a function"""
+    value: Optional[Expr]
+
+
+@dataclass
+class StructField(Node):
+    """A struct field"""
+    name: str
+    type: TypeExpr
+    default: Optional[Expr]
+
+
+@dataclass
+class StructDecl(Statement):
+    """Declares a struct"""
+    name: str
+    fields: list[StructField]
+    
+
+@dataclass
+class EnumVariant(Node):
+    pass
+
+
+@dataclass
+class UnitVariant(EnumVariant):
+    name: str
+    
+
+@dataclass
+class TupleVariant(EnumVariant):
+    fields: list[TypeExpr]
+    
+
+@dataclass
+class StructVariant(EnumVariant):
+    name: str
+    fields: list[StructField]
+
+
+@dataclass
+class EnumDecl(Statement):
+    """Declares an enum"""
+    name: str
+    variants: list[EnumVariant]
+
+
+@dataclass
+class Import(Statement):
+    """Imports a module"""
+    # The names to import from the module
+    imports: list[str]
+    # The path to the module
+    path: list[str]
+    # The alias to use for the module
+    alias: Optional[str]
+    
+
+@dataclass
+class For(Statement):
+    """A for loop"""
+    const: str
+    iterable: Expr
+    body: Block
+
+
+@dataclass
+class While(Statement):
+    """A while loop"""
+    condition: Expr
+    body: Block
+
+
+@dataclass
+class Break(Statement):
+    """Breaks out of a loop"""
+    pass
+
+
+@dataclass
+class Continue(Statement):
+    """Continues a loop"""
+    pass
+
+
+@dataclass
+class ExprStmt(Statement):
+    """An expression statement"""
+    expr: Expr
+
+
+# Expressions ========================
+
+@dataclass
+class IntLit(Expr):
+    """An integer literal"""
     value: int
 
 
 @dataclass
-class Float(Expression):
+class FloatLit(Expr):
+    """A float literal"""
     value: float
 
 
 @dataclass
-class String(Expression):
-    value: str
-
-
-@dataclass
-class Boolean(Expression):
+class BoolLit(Expr):
+    """A boolean literal"""
     value: bool
 
 
 @dataclass
-class Array(Expression):
-    values: List[Expression]
+class StrLit(Expr):
+    """A string literal"""
+    value: str
+
+@dataclass
+class Ident(Expr):
+    """An identifier"""
+    name: str
 
 
 @dataclass
-class ObjectField(Expression):
-    name: Optional[str]
-    value: Expression
+class Call(Expr):
+    """A function call"""
+    callee: Expr
+    args: list[Expr]
 
 
 @dataclass
-class Object(Expression):
-    fields: List[ObjectField]
+class ArrayLit(Expr):
+    """An array literal"""
+    elements: list[Expr]
 
 
 @dataclass
-class Array(Expression):
-    values: List[Expression]
+class TupleLit(Expr):
+    """A tuple literal"""
+    elements: list[Expr]
 
 
 @dataclass
-class FieldAccess(Expression):
-    record: Expression
-    field: Expression
+class StructLit(Expr):
+    """A struct literal"""
+    name: str
+    fields: list[StructField]
 
 
 @dataclass
-class Call(Expression):
-    callee: Expression
-    args: List[Expression]
+class EnumLit(Expr):
+    """An enum literal"""
+    name: str
+    variant: Expr
+    
+
+@dataclass
+class FieldAccess(Expr):
+    """Accesses a field of a struct or tuple"""
+    value: Expr
+    # the field access is an expr to handle a.b.c or a.b[0] etc
+    field: Expr
 
 
 @dataclass
-class Index(Expression):
-    array: Expression
-    index: Expression
+class IndexAccess(Expr):
+    """Accesses an element of an array or tuple"""
+    value: Expr
+    index: Expr
+
+
+@dataclass
+class Unary(Expr):
+    """A unary expression"""
+    op: TokenType
+    value: Expr
+    
+
+@dataclass
+class Binary(Expr):
+    """A binary expression"""
+    op: TokenType
+    left: Expr
+    right: Expr
