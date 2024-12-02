@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Callable, Optional
 
+from quanta.ast import ArrayType, Expr, FnType, Statement, BoolType, FloatType, IntType, StrType, TupleType, TypeExpr, UdtType
+
 # helper functions
 def is_whitespace(char: str) -> bool:
     return char == ' ' or char == '\t'
@@ -331,4 +333,57 @@ class Parser:
         print(f'{message} at line {self.current.line}')
         self.had_error = True
         
-        
+    def expression(self) -> Expr:
+        pass
+
+    def statement(self) -> Statement:
+        pass
+
+    def type_expr(self) -> TypeExpr:
+        if self.previous.type == TokenType.IDENTIFIER:
+            lexeme = self.previous.lexeme
+            type_expr = None
+            match lexeme:
+                case 'i8' | 'i16' | 'i32' | 'i64' | 'i128':
+                    type_expr = IntType(signed=True, size=int(lexeme[1:]))
+                case 'u8' | 'u16' | 'u32' | 'u64' | 'u128':
+                    type_expr = IntType(signed=False, size=int(lexeme[1:]))
+                case 'f32' | 'f64':
+                    type_expr = FloatType(size=int(lexeme[1:]))
+                case 'bool':
+                    type_expr = BoolType()
+                case 'str':
+                    type_expr = StrType()
+                case 'fn':
+                    self.advance()
+                    params = []
+                    while self.current.type != TokenType.RPAREN:
+                        params.append(self.type_expr())
+                        if self.current.type == TokenType.COMMA:
+                            self.advance()
+                    self.consume(TokenType.RPAREN, f'Expected ) after function type parameters {params}')
+                    self.consume(TokenType.ARROW, f'Expected -> after function type parameters {params}')
+                    return_type = self.type_expr()
+                    return FnType(params=params, return_type=return_type)
+                case _:
+                    type_expr = UdtType(name=lexeme)
+            return type_expr
+        elif self.previous.type == TokenType.LBRACKET:
+            self.advance()
+            element_type = self.type_expr()
+            self.consume(TokenType.COLON, f'Expected : after array element type {element_type}')
+            self.advance()
+            size = self.expression()
+            self.consume(TokenType.RBRACKET, f'Expected ] after array type {element_type} {size}')
+            return ArrayType(element_type=element_type, size=size)
+        elif self.previous.type == TokenType.LPAREN:
+            self.advance()
+            elements = []
+            while self.current.type != TokenType.RPAREN:
+                elements.append(self.type_expr())
+                if self.current.type == TokenType.COMMA:
+                    self.advance()
+            self.consume(TokenType.RPAREN, f'Expected ) after tuple type {elements}')
+            return TupleType(elements=elements)
+        else:
+            self.error(f'Expected type expression, got {self.previous.lexeme}')

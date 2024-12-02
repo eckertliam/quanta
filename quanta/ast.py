@@ -251,7 +251,7 @@ class StructLit(Expr):
 class EnumLit(Expr):
     """An enum literal"""
     name: str
-    variant: Expr
+    variant: EnumVariant
     
 
 @dataclass
@@ -282,3 +282,61 @@ class Binary(Expr):
     op: TokenType
     left: Expr
     right: Expr
+
+
+@dataclass
+class StmtExpr(Expr):
+    """An expression statement"""
+    stmt: Statement
+    
+    
+# Types ==============================
+
+@dataclass
+class IntType(TypeExpr):
+    """An integer type"""
+    signed: bool
+    size: int
+
+
+@dataclass
+class FloatType(TypeExpr):
+    """A float type"""
+    size: int
+
+
+@dataclass
+class BoolType(TypeExpr):
+    """A boolean type"""
+    pass
+
+
+@dataclass
+class StrType(TypeExpr):
+    """A string type"""
+    pass
+
+
+@dataclass
+class UdtType(TypeExpr):
+    """A user-defined type"""
+    name: str
+
+@dataclass
+class ArrayType(TypeExpr):
+    """An array type"""
+    element_type: TypeExpr
+    size: Expr
+
+
+@dataclass
+class TupleType(TypeExpr):
+    """A tuple type"""
+    elements: list[TypeExpr]
+
+
+@dataclass
+class FnType(TypeExpr):
+    """A function type"""
+    params: list[TypeExpr]
+    return_type: TypeExpr
