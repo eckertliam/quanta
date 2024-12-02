@@ -11,7 +11,7 @@ class Node:
 
 @dataclass
 class Expr(Node):
-    pass
+    line: int
 
 
 @dataclass
@@ -21,7 +21,7 @@ class TypeExpr(Expr):
 
 @dataclass
 class Statement(Node):
-    pass
+    line: int
 
 
 @dataclass

@@ -1,15 +1,18 @@
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import Callable, Optional
+from typing import Callable, Dict, Optional
 
-from quanta.ast import ArrayType, Expr, FnType, Statement, BoolType, FloatType, IntType, StrType, TupleType, TypeExpr, UdtType
+from quanta.ast import ArrayType, Binary, BoolLit, Expr, FloatLit, FnType, Ident, IntLit, Statement, BoolType, FloatType, IntType, StrLit, StrType, TupleType, TypeExpr, UdtType, Unary
+
 
 # helper functions
 def is_whitespace(char: str) -> bool:
     return char == ' ' or char == '\t'
 
+
 def is_identifier_start(char: str) -> bool:
     return char.isalpha() or char == '_'
+
 
 def is_identifier_char(char: str) -> bool:
     return char.isalnum() or char in '_?!'
@@ -76,6 +79,7 @@ class TokenType(Enum):
     DEDENT = auto()
     EOF = auto()
     ERROR = auto()
+    
     
 @dataclass
 class Token:
@@ -301,12 +305,127 @@ class Lexer:
         while self.current < len(self.source):
             self.next_token()
         return self.tokens
+    
 
+class Precedence(Enum):
+    NONE = 0
+    OR = 1
+    AND = 2
+    EQUALITY = 3
+    COMPARISON = 4
+    TERM = 5
+    FACTOR = 6
+    UNARY = 7
+    CALL = 8
+    PRIMARY = 9
+    
+    def increment(self) -> 'Precedence':
+        if self == Precedence.NONE:
+            return Precedence.OR
+        elif self == Precedence.PRIMARY:
+            return self
+        return Precedence(self.value + 1)
+    
+    @staticmethod
+    def from_token_type(type: TokenType) -> 'Precedence':
+        return {
+            TokenType.BAR_BAR: Precedence.OR,
+            TokenType.AMP_AMP: Precedence.AND,
+            TokenType.EQ_EQ: Precedence.EQUALITY,
+            TokenType.BANG_EQ: Precedence.EQUALITY,
+            TokenType.LT: Precedence.COMPARISON,
+            TokenType.LT_EQ: Precedence.COMPARISON,
+            TokenType.GT: Precedence.COMPARISON,
+            TokenType.GT_EQ: Precedence.COMPARISON,
+            TokenType.PLUS: Precedence.TERM,
+            TokenType.MINUS: Precedence.TERM,
+            TokenType.STAR: Precedence.FACTOR,
+            TokenType.SLASH: Precedence.FACTOR,
+            TokenType.PERCENT: Precedence.FACTOR,
+        }.get(type, Precedence.NONE)
+
+
+PrefixFn = Callable[['Parser'], Expr]
+InfixFn = Callable[['Parser', Expr], Expr]
+
+
+@dataclass
+class ParseRule:
+    prefix: Optional[PrefixFn]
+    infix: Optional[InfixFn]
+    precedence: Precedence
+    
+    
+def binary(parser: 'Parser', lhs: Expr) -> Expr:
+    operator_type = parser.previous.type
+    line = parser.previous.line
+    rule = PARSE_RULES.get(operator_type, None)
+    assert rule is not None, f'No binary infix rule for {operator_type}'
+    rhs = parser.parse_precedence(rule.precedence.increment())
+    return Binary(op=operator_type, left=lhs, right=rhs, line=line)
+
+
+def unary(parser: 'Parser') -> Expr:
+    operator_type = parser.previous.type
+    line = parser.previous.line
+    operand = parser.parse_precedence(Precedence.UNARY)
+    return Unary(op=operator_type, value=operand, line=line)
+
+
+def identifier(parser: 'Parser') -> Expr:
+    return Ident(name=parser.previous.lexeme, line=parser.previous.line)
+
+
+def number(parser: 'Parser') -> Expr:
+    lexeme = parser.previous.lexeme
+    if '.' in lexeme:
+        return FloatLit(value=float(lexeme), line=parser.previous.line)
+    else:
+        return IntLit(value=int(lexeme), line=parser.previous.line)
+
+    
+def string(parser: 'Parser') -> Expr:
+    return StrLit(value=parser.previous.lexeme, line=parser.previous.line)
+
+
+def boolean(parser: 'Parser') -> Expr:
+    return BoolLit(value=parser.previous.lexeme == 'true', line=parser.previous.line)
+
+
+PARSE_RULES: Dict[TokenType, ParseRule] = {
+    TokenType.IDENTIFIER: ParseRule(prefix=identifier, infix=None, precedence=Precedence.NONE),
+    TokenType.NUMBER: ParseRule(prefix=number, infix=None, precedence=Precedence.NONE),
+    TokenType.STRING: ParseRule(prefix=string, infix=None, precedence=Precedence.NONE),
+    TokenType.TRUE: ParseRule(prefix=boolean, infix=None, precedence=Precedence.NONE),
+    TokenType.FALSE: ParseRule(prefix=boolean, infix=None, precedence=Precedence.NONE),
+    TokenType.BANG: ParseRule(prefix=unary, infix=None, precedence=Precedence.UNARY),
+    TokenType.BAR_BAR: ParseRule(prefix=None, infix=binary, precedence=Precedence.OR),
+    TokenType.AMP_AMP: ParseRule(prefix=None, infix=binary, precedence=Precedence.AND),
+    TokenType.EQ_EQ: ParseRule(prefix=None, infix=binary, precedence=Precedence.EQUALITY),
+    TokenType.BANG_EQ: ParseRule(prefix=None, infix=binary, precedence=Precedence.EQUALITY),
+    TokenType.LT: ParseRule(prefix=None, infix=binary, precedence=Precedence.COMPARISON),
+    TokenType.LT_EQ: ParseRule(prefix=None, infix=binary, precedence=Precedence.COMPARISON),
+    TokenType.GT: ParseRule(prefix=None, infix=binary, precedence=Precedence.COMPARISON),
+    TokenType.GT_EQ: ParseRule(prefix=None, infix=binary, precedence=Precedence.COMPARISON),
+    TokenType.PLUS: ParseRule(prefix=None, infix=binary, precedence=Precedence.TERM),
+    TokenType.MINUS: ParseRule(prefix=unary, infix=binary, precedence=Precedence.TERM),
+    TokenType.STAR: ParseRule(prefix=None, infix=binary, precedence=Precedence.FACTOR),
+    TokenType.SLASH: ParseRule(prefix=None, infix=binary, precedence=Precedence.FACTOR),
+    TokenType.PERCENT: ParseRule(prefix=None, infix=binary, precedence=Precedence.FACTOR),
+    # TODO: handle statement expressions such as ifs and matches that resolve to an expression
+    # TODO: handle function calls
+    # TODO: handle grouping
+    # TODO: handle array literals
+    # TODO: handle tuple literals
+    # TODO: handle struct literals
+    # TODO: handle enum literals
+}
+    
 
 class Parser:
-    def __init__(self, tokens: list[Token]):
+    def __init__(self, src: str):
         self.idx: int = 0
-        self.tokens: list[Token] = tokens
+        self.tokens: list[Token] = Lexer(src).tokenize()
         self.previous: Token = None
         self.current: Token = None
         self.had_error: bool = False
@@ -330,12 +449,36 @@ class Parser:
         if self.panic_mode:
             return
         self.panic_mode = True
-        print(f'{message} at line {self.current.line}')
+        print(f'{message} at line {self.previous.line}')
         self.had_error = True
         
     def expression(self) -> Expr:
-        pass
-
+        return self.parse_precedence(Precedence.PRIMARY)
+    
+    def parse_precedence(self, precedence: Precedence) -> Expr:
+        # advance over the first token moving it to previous
+        self.advance()
+        # parse the prefix
+        parse_rule = PARSE_RULES.get(self.previous.type, None)
+        assert parse_rule is not None, f'No prefix rule for {self.previous.type}'
+        prefix_rule = parse_rule.prefix
+        if prefix_rule is None:
+            self.error(f'Expected expression, got {self.previous.type}')
+            return
+        left = prefix_rule(self)
+        # parse the infix
+        while precedence.value <= parse_rule.precedence.value:
+            self.advance()
+            parse_rule = PARSE_RULES.get(self.previous.type, None)
+            assert parse_rule is not None, f'No infix rule for {self.previous.type}'
+            infix_rule = parse_rule.infix
+            if infix_rule is None:
+                self.error(f'Expected a valid infix expression, got {self.previous.type}')
+                return
+            left = infix_rule(self, left)
+        return left
+            
+            
     def statement(self) -> Statement:
         pass
 
@@ -387,3 +530,4 @@ class Parser:
             return TupleType(elements=elements)
         else:
             self.error(f'Expected type expression, got {self.previous.lexeme}')
+        
